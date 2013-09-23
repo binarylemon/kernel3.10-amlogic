@@ -841,13 +841,6 @@ static int aic3x_add_widgets(struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	printk("enter %s\n", __func__);
-
-	snd_soc_dapm_new_controls(dapm, aic3x_dapm_widgets,
-				  ARRAY_SIZE(aic3x_dapm_widgets));
-
-	/* set up audio path interconnects */
-	snd_soc_dapm_add_routes(dapm, intercon, ARRAY_SIZE(intercon));
-
 	if (aic3x->model == AIC3X_MODEL_3007) {
 		snd_soc_dapm_new_controls(dapm, aic3007_dapm_widgets,
 			ARRAY_SIZE(aic3007_dapm_widgets));
@@ -1412,8 +1405,6 @@ static int aic3x_probe(struct snd_soc_codec *codec)
 	}
 
 	printk("%s:%d\n", __func__, __LINE__);
-	snd_soc_add_codec_controls(codec, aic3x_snd_controls,
-			     ARRAY_SIZE(aic3x_snd_controls));
 	if (aic3x->model == AIC3X_MODEL_3007)
 		snd_soc_add_codec_controls(codec, &aic3x_classd_amp_gain_ctrl, 1);
 
@@ -1476,6 +1467,12 @@ static struct snd_soc_codec_driver soc_codec_dev_aic3x = {
 	.remove = aic3x_remove,
 	.suspend = aic3x_suspend,
 	.resume = aic3x_resume,
+	.controls = aic3x_snd_controls,
+	.num_controls = ARRAY_SIZE(aic3x_snd_controls),
+	.dapm_widgets = aic3x_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(aic3x_dapm_widgets),
+	.dapm_routes = intercon,
+	.num_dapm_routes = ARRAY_SIZE(intercon),
 };
 
 /*
