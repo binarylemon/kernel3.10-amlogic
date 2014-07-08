@@ -929,10 +929,17 @@ void snd_pcm_timer_done(struct snd_pcm_substream *substream);
 static inline void snd_pcm_gettime(struct snd_pcm_runtime *runtime,
 				   struct timespec *tv)
 {
-	if (runtime->tstamp_type == SNDRV_PCM_TSTAMP_TYPE_MONOTONIC)
+	switch (runtime->tstamp_type) {
+	case SNDRV_PCM_TSTAMP_TYPE_MONOTONIC:
 		do_posix_clock_monotonic_gettime(tv);
-	else
+		break;
+	case SNDRV_PCM_TSTAMP_TYPE_MONOTONIC_RAW:
+		getrawmonotonic(tv);
+		break;
+	default:
 		getnstimeofday(tv);
+		break;
+	}
 }
 
 /*
