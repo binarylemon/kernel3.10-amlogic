@@ -36,6 +36,7 @@
 #ifndef CONFIG_SYS_NAND_RESET_CNT
 #define CONFIG_SYS_NAND_RESET_CNT 200000
 #endif
+
 extern int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip, const uint8_t *buf,int oob_required, int page, int cached, int raw);
 extern void m3_nand_boot_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip, const uint8_t *buf,int oob_required);
 extern  int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip, uint8_t *buf,int oob_required, int page);
@@ -247,6 +248,8 @@ struct aml_nand_flash_dev aml_nand_flash_ids[] = {
 	{"2 Generation NAND 4GiB K9GBG08U0B", {NAND_MFR_SAMSUNG, 0xD7, 0x94, 0x7e, 0x64, 0x44}, 8192, 4096, 0x100000, 640, 1, 20, 15, 0, (NAND_TIMING_MODE5 | NAND_ECC_BCH16_MODE )},
 	{"2 Generation NAND 8GiB K9LCG08U0B", {NAND_MFR_SAMSUNG, 0xDE, 0xD5, 0x7e, 0x68, 0x44}, 8192, 8192, 0x100000, 640, 1, 20, 15, 0, (NAND_TIMING_MODE5 | NAND_ECC_BCH16_MODE )},
 #endif
+	{"A revision NAND 1GiB sF1G-A", {1, 0xf1, 0x0, 0x1d, 0x01,0xf1}, 2048, 128, 0x20000, 64, 1, 16, 15, 0, (NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE )},
+	{"A revision NAND 1GiB MT29F1G-A", {NAND_MFR_MICRON, 0xf1, 0x80, 0x95, 0x04,0x00}, 2048, 128, 0x20000, 64, 1, 16, 15, 0, (NAND_TIMING_MODE5 | NAND_ECC_BCH12_MODE )},
 	{NULL,}
 };
 
@@ -298,7 +301,6 @@ static void aml_platform_get_user_byte(struct aml_nand_chip *aml_chip, unsigned 
 {
 	int read_times = 0;
 	unsigned int len = PER_INFO_BYTE/sizeof(unsigned int);
-
 	while (byte_num > 0) {
 		*oob_buf++ = (aml_chip->user_info_buf[read_times*len] & 0xff);
 		byte_num--;
@@ -1469,12 +1471,12 @@ void aml_nand_set_toggle_mode_toshiba(struct mtd_info *mtd, int chipnr)
 
 	aml_nand_read_set_flash_feature_toshiba(mtd,chipnr);
 	
-	printk("##NAND CFG =0x%x before enable toggle mode \n",READ_CBUS_REG(NAND_CFG));
+	//printk("##NAND CFG =0x%x before enable toggle mode \n",READ_CBUS_REG(NAND_CFG));
 	//second set nand controller pinmux and enable toggle mode
 	NFC_SYNC_ADJ();
 	NFC_ENABLE_TOSHIBA_TOGGLE_MODE();
 	aml_chip->toggle_mode = 1;
-	printk("NAND CFG =0x%x after enable toggle mode \n",READ_CBUS_REG(NAND_CFG));
+	//printk("NAND CFG =0x%x after enable toggle mode \n",READ_CBUS_REG(NAND_CFG));
 
 }
 
@@ -1937,7 +1939,6 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 #endif
 }
 
-int nand_idleflag=0;
 static void aml_nand_select_chip(struct mtd_info *mtd, int chipnr)
 {
 	//int i;
@@ -1958,11 +1959,9 @@ static void aml_nand_select_chip(struct mtd_info *mtd, int chipnr)
 	switch (chipnr) {
 		case -1:
 		#ifdef CONFIG_OF
-			if(nand_idleflag){
-				ret = pinctrl_select_state(nand_pinctrl , nand_idlestate);
-				if(ret<0)			
-					printk("%s:%d  %s  nand select idle state error \n",__func__,__LINE__,dev_name(aml_chip->device));
-				nand_idleflag=0;
+			if(aml_chip->nand_pinctrl != NULL){
+				devm_pinctrl_put(aml_chip->nand_pinctrl);
+				aml_chip->nand_pinctrl = NULL;
 				mutex_unlock(&spi_nand_mutex);
 			}
 		#else
@@ -1973,13 +1972,12 @@ static void aml_nand_select_chip(struct mtd_info *mtd, int chipnr)
 		#ifdef CONFIG_OF
 		 for (retry=0; retry<10; retry++) {
 			mutex_lock(&spi_nand_mutex);
-			nand_idleflag=1;
 			if((aml_chip->ops_mode & AML_CHIP_NONE_RB) == 0)
-				ret = pinctrl_select_state(nand_pinctrl , nand_rbstate);
+			aml_chip->nand_pinctrl = devm_pinctrl_get_select(aml_chip->device,"nand_rb_mod");
 			else
-				ret = pinctrl_select_state(nand_pinctrl , nand_norbstate);
-			if (ret<0){
-				nand_idleflag=0;
+			aml_chip->nand_pinctrl = devm_pinctrl_get_select(aml_chip->device,"nand_norb_mod");
+			if (IS_ERR(aml_chip->nand_pinctrl)){
+				aml_chip->nand_pinctrl = NULL;
 				mutex_unlock(&spi_nand_mutex);
 				printk("%s:%d  %s  can't get pinctrl \n",__func__,__LINE__,dev_name(aml_chip->device));
 			}
@@ -2330,6 +2328,8 @@ static void aml_nand_base_command(struct aml_nand_chip *aml_chip, unsigned comma
 				if ((aml_chip->mfr_type == NAND_MFR_MICRON) || (aml_chip->mfr_type == NAND_MFR_INTEL)) {
 					plane_page_addr |= ((plane_blk_addr + 1) << pages_per_blk_shift);
 					command_temp = command;
+					chip->cmd_ctrl(mtd, 0x32, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
+					aml_chip->aml_nand_wait_devready(aml_chip, chipnr);
 					chip->cmd_ctrl(mtd, command_temp & 0xff, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
 				}
 				else {
@@ -6683,10 +6683,17 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 	if (!aml_chip->aml_nand_hwecc_correct)
 		aml_chip->aml_nand_hwecc_correct = aml_platform_hwecc_correct;
 
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+	if (!chip->IO_ADDR_R)
+		chip->IO_ADDR_R = (void __iomem *) NAND_IO_ADDR;
+	if (!chip->IO_ADDR_W)
+		chip->IO_ADDR_W = (void __iomem *) NAND_IO_ADDR;
+#else
 	if (!chip->IO_ADDR_R)
 		chip->IO_ADDR_R = (void __iomem *) CBUS_REG_ADDR(NAND_BUF);
 	if (!chip->IO_ADDR_W)
 		chip->IO_ADDR_W = (void __iomem *) CBUS_REG_ADDR(NAND_BUF);
+#endif
 
 	chip->options |=  NAND_SKIP_BBTSCAN;
 	chip->options |= NAND_NO_SUBPAGE_WRITE;
@@ -6710,6 +6717,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		err = -ENXIO;
 		goto exit_error;
 	}
+	
 	for (i=0; i<aml_chip->chip_num; i++) {
 		aml_chip->valid_chip[i] = 1;
 		aml_chip->chip_enable[i] = (((plat->chip_enable_pad >> i*4) & 0xf) << 10);
@@ -6745,7 +6753,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		chip->ecc.read_page_raw = aml_nand_read_page_raw;
 		chip->ecc.write_page_raw = aml_nand_write_page_raw;
 	}
-	
 	valid_chip_num = 0;
 	for (i=0; i<aml_chip->chip_num; i++) {
 		if (aml_chip->valid_chip[i]) {
@@ -6758,7 +6765,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		printk("dect valid_chip_num:%d over 2, using NO RB mode\n", valid_chip_num);
     	}
     	else{
-		
 		if(aml_chip->rbpin_detect){
 			por_cfg = READ_CBUS_REG(ASSIST_POR_CONFIG);		
 			printk("%s auto detect RB pin here and por_cfg:%x\n", __func__, por_cfg);
@@ -6776,7 +6782,9 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 				aml_chip->rb_enable[0] = 0;
 			}
 		}
-		
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+        aml_chip->rb_enable[0] = (unsigned)NULL;
+#endif		
 		//aml_chip->rb_enable[0] = 0;
 		if (!aml_chip->rb_enable[0]) {
 			aml_chip->ops_mode |= AML_CHIP_NONE_RB;
@@ -6791,7 +6799,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			printk("#####%s, with RB pins and chip->chip_delay:%d\n", __func__, chip->chip_delay);
 		}		
 	}	
-	
 	chip->scan_bbt = aml_nand_scan_bbt;
 
 	mtd->_suspend = aml_nand_suspend;
@@ -6911,7 +6918,6 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		printk(" oob layout use nand base oob layout oobsize = %d,oobmul =%d,mtd->oobsize =%d,aml_chip->oob_size =%d\n", chip->ecc.layout->oobfree[0].length,oobmul,mtd->oobsize,aml_chip->oob_size);
 		}
 	}
-
 	/*
 	 * The number of bytes available for a client to place data into
 	 * the out of band area
@@ -6931,14 +6937,12 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 		err = -ENOMEM;
 		goto exit_error;
 	}
-
 	aml_chip->user_info_buf = dma_alloc_coherent(aml_chip->device, (mtd->writesize / chip->ecc.size)*sizeof(int), &(aml_chip->nand_info_dma_addr), GFP_KERNEL);
 	if (aml_chip->user_info_buf == NULL) {
 		printk("no memory for flash info buf\n");
 		err = -ENOMEM;
 		goto exit_error;
 	}
-
 	if (chip->buffers)
 		kfree(chip->buffers);
 	if (mtd->oobsize >= NAND_MAX_OOBSIZE)
@@ -6977,11 +6981,9 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			goto exit_error;		
 		}
 		memset(aml_chip->block_status, 0, (mtd->size >> phys_erase_shift));
-
 		err = aml_nand_env_check(mtd);
 		if (err)
 			printk("invalid nand env\n");
-
 #ifdef CONFIG_AML_NAND_ENV
 			pr_info("nand env: nand_env_probe. \n");
 

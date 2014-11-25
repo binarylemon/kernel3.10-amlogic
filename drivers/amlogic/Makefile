@@ -74,8 +74,8 @@ ifneq ($(wildcard $(srctree)/../hardware/amlogic/pmu),)
 endif
 
 obj-y += tvin_v4l2/
-ifneq ($(wildcard $(srctree)/../hardware/tvin),)
-	obj-$(CONFIG_TVIN) += ../../../hardware/tvin/
+ifneq ($(wildcard $(srctree)/drivers/amlogic/tvin),)
+	obj-$(CONFIG_TVIN) += tvin/
 endif
 
 obj-$(CONFIG_AML_EXT_HDMIIN) += ext_hdmiin/
@@ -93,8 +93,8 @@ obj-$(CONFIG_AM_DVB) += dvb_tv/
 obj-$(CONFIG_AM_SMARTCARD) += smartcard/
 
 obj-$(CONFIG_AM_WIFI) += wifi/
-ifneq ($(wildcard $(srctree)/../hardware/wifi),)
-	obj-$(CONFIG_SDIO_DHD_CDC_WIFI_40181_MODULE) += ../../../hardware/wifi/broadcom/drivers/ap6xxx/broadcm_40181/
+ifneq ($(wildcard $(srctree)/drivers/amlogic/wifi),)
+	obj-$(CONFIG_SDIO_DHD_CDC_WIFI_40181_MODULE) += wifi/broadcom/drivers/ap6xxx/broadcm_40181/
 	obj-$(CONFIG_BCMDHD) += ../../../hardware/wifi/broadcom/drivers/usi/bcmdhd/
 	obj-$(CONFIG_RTL8188EU) += ../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU/
 	obj-$(CONFIG_RTL8188EU_MP) += ../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU_MP/

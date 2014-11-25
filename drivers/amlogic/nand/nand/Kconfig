@@ -18,7 +18,7 @@ config AM_NAND
 config AM_NAND_RBPIN
 	bool "Meson NAND RB bit support"
 	depends on AM_NAND
-	depends on ARCH_MESON3 || ARCH_MESON6
+	depends on ARCH_MESON3 || ARCH_MESON6 || ARCH_MESON8B
 	default y
 	help
 	  Support NAND RB bit
@@ -26,7 +26,7 @@ config AM_NAND_RBPIN
 config AML_NAND_ENV
 	bool "Meson NAND environment variable device (dev/nand_env) support"
 	depends on AM_NAND
-	depends on ARCH_MESON3 || ARCH_MESON6
+	depends on ARCH_MESON3 || ARCH_MESON6 || ARCH_MESON8B
 	default y
 	help
 	  Support NAND environment variable device
@@ -34,7 +34,7 @@ config AML_NAND_ENV
 config AML_NAND_KEY
 	bool "Meson key data store in nand device(dev/nand_key) support"
 	depends on AM_NAND
-	depends on ARCH_MESON3 || ARCH_MESON6
+	depends on ARCH_MESON3 || ARCH_MESON6 || ARCH_MESON8B
 	default n
 	help
 	  Support   key variable store in NAND device
@@ -57,7 +57,7 @@ config AML_NFTL
 config AML_NFTL_NEW
 	tristate "Meson NAND NEW_FTL support"
 	depends on AM_NAND
-	default m
+	default n
 	help
 	  Support NAND Flash New Translation Layer
 config AML_NEXT_NAND

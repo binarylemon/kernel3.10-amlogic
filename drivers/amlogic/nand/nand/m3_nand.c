@@ -52,7 +52,7 @@ static struct aml_nand_bch_desc m3_bch_list[] = {
 	[6]=ECC_INFORMATION("NAND_BCH60_1K_MODE" ,NAND_ECC_BCH60_1K_MODE, NAND_ECC_UNIT_1KSIZE, NAND_BCH60_1K_ECC_SIZE, 2),
 };
 
-#ifdef MX_REVD
+#if 1//def MX_REVD
 unsigned char pagelist_hynix256[128] = {
 	0x00, 0x01, 0x02, 0x03, 0x06, 0x07, 0x0A, 0x0B,
 	0x0E, 0x0F, 0x12, 0x13, 0x16, 0x17, 0x1A, 0x1B,
@@ -93,6 +93,7 @@ unsigned char pagelist_1ynm_hynix256[128] = {
 	0xEf, 0xf1, 0xF3, 0xF5, 0xF7, 0xF9, 0xFb, 0xFd,
 };
 #endif
+
 static unsigned char mx_revd_flag = 0;
 static unsigned mx_nand_check_chiprevd(void)
 {
@@ -275,6 +276,19 @@ static void m3_nand_hw_init(struct aml_nand_chip *aml_chip)
 	struct clk *sys_clk;
 	int sys_clk_rate, sys_time, start_cycle, end_cycle, bus_cycle, bus_timing, Tcycle, T_REA = DEFAULT_T_REA, T_RHOH = DEFAULT_T_RHOH;
 
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+    
+    //NAND PLL 212MHz
+    //NFC_SET_CORE_PLL(((1<<9) | (1<<8) | 3));
+    
+    
+    //NAND PLL 160MHz
+    NFC_SET_CORE_PLL(((0<<9) | (1<<8) | 3));
+         
+	bus_cycle  = 4;	
+    bus_timing = bus_cycle + 2;        
+	
+#else
 	sys_clk = clk_get_sys(NAND_SYS_CLK_NAME, NULL);
 	sys_clk_rate = clk_get_rate(sys_clk);
 	sys_time = (10000 / (sys_clk_rate / 1000000));
@@ -296,6 +310,8 @@ static void m3_nand_hw_init(struct aml_nand_chip *aml_chip)
 		return;
 
 	bus_timing = (start_cycle + end_cycle) / 2;
+#endif
+	
 	NFC_SET_CFG(0);
 	NFC_SET_TIMING_ASYC(bus_timing, (bus_cycle - 1));
 	NFC_SEND_CMD(1<<31);
@@ -309,6 +325,14 @@ static void m3_nand_adjust_timing(struct aml_nand_chip *aml_chip)
 	struct clk *sys_clk;
 	int sys_clk_rate, sys_time, start_cycle, end_cycle, bus_cycle, bus_timing, Tcycle;
 
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+    
+    //NAND PLL 212MHz
+    NFC_SET_CORE_PLL(((1<<9) | (1<<8) | 3));
+     
+	bus_cycle  = 5;	
+	bus_timing = bus_cycle + 2;          
+#else
 	if (!aml_chip->T_REA)
 		aml_chip->T_REA = 20;
 	if (!aml_chip->T_RHOH)
@@ -334,6 +358,8 @@ static void m3_nand_adjust_timing(struct aml_nand_chip *aml_chip)
 		return;
 
 	bus_timing = (start_cycle + end_cycle) / 2;
+#endif
+
 	NFC_SET_CFG(0);
 	NFC_SET_TIMING_ASYC(bus_timing, (bus_cycle - 1));
 	NFC_SEND_CMD(1<<31);
@@ -412,7 +438,7 @@ static void m3_nand_resume(struct mtd_info *mtd)
 	printk("m3 nand resume entered\n");
 	return;
 }
-
+#if 1
 static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 {
 	struct mtd_info *mtd = &aml_chip->mtd;
@@ -568,7 +594,7 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 
 	return error;
 }
-
+#endif
 
 static int aml_platform_dma_waiting(struct aml_nand_chip *aml_chip)
 {
@@ -701,6 +727,7 @@ static int m3_nand_dma_read(struct aml_nand_chip *aml_chip, unsigned char *buf, 
 	return 0;
 }
 
+#if 1
 static int m3_nand_hwecc_correct(struct aml_nand_chip *aml_chip, unsigned char *buf, unsigned size, unsigned char *oob_buf)
 {
 	struct nand_chip *chip = &aml_chip->chip;
@@ -729,6 +756,7 @@ static int m3_nand_hwecc_correct(struct aml_nand_chip *aml_chip, unsigned char *
 
 	return 0;
 }
+#endif
 
  void m3_nand_boot_erase_cmd(struct mtd_info *mtd, int page)
 {
@@ -1346,6 +1374,7 @@ static int m3_nand_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if 1
 static void m3_nand_shutdown(struct platform_device *pdev)
 {
 	struct aml_nand_device *aml_nand_dev = to_nand_dev(pdev);
@@ -1374,6 +1403,8 @@ static void m3_nand_shutdown(struct platform_device *pdev)
 
 	return;
 }
+
+#endif
 
 static int amlogic_parse_nand_partion(struct device_node *np,struct aml_nand_platform *plat)
 {
@@ -1438,6 +1469,7 @@ EXPORT_SYMBOL(aml_register_mtd_blktrans);
 EXPORT_SYMBOL(aml_deregister_mtd_blktrans);
 EXPORT_SYMBOL(aml_add_mtd_blktrans_dev);
 EXPORT_SYMBOL(aml_del_mtd_blktrans_dev);
+
 ssize_t show_nand_version_info(struct class *class,
 			struct class_attribute *attr,	char *buf)
 {
@@ -1447,6 +1479,7 @@ ssize_t show_nand_version_info(struct class *class,
 
 	return 0;
 }
+
 #ifdef CONFIG_OF
 static struct mtd_partition normal_partition_info[] = {
     {
