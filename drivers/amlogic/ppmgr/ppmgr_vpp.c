@@ -411,23 +411,27 @@ static int ppmgr_receiver_event_fun(int type, void *data, void *private_data)
                 return RECEIVER_INACTIVE;
             }
             break;
-            case VFRAME_EVENT_PROVIDER_START:
+        case VFRAME_EVENT_PROVIDER_START:
 #ifdef DDD
         printk("register now \n");
 #endif
             vf_ppmgr_reg_provider();
             break;
-            case VFRAME_EVENT_PROVIDER_UNREG:
+        case VFRAME_EVENT_PROVIDER_UNREG:
 #ifdef DDD
         printk("unregister now \n");
 #endif
             vf_ppmgr_unreg_provider();
             break;
-            case VFRAME_EVENT_PROVIDER_LIGHT_UNREG:
+        case VFRAME_EVENT_PROVIDER_LIGHT_UNREG:
             break;
-            case VFRAME_EVENT_PROVIDER_RESET       :
-            	vf_ppmgr_reset(0);
-            	break;
+        case VFRAME_EVENT_PROVIDER_RESET       :
+            vf_ppmgr_reset(0);
+            break;
+        case VFRAME_EVENT_PROVIDER_FR_HINT:
+        case VFRAME_EVENT_PROVIDER_FR_END_HINT:
+            vf_notify_receiver(PROVIDER_NAME,type,data);
+            break;
         default:
             break;
     }
@@ -2353,6 +2357,8 @@ static int ppmgr_task(void *data)
             int process_type = TYPE_NONE;
             platform_type_t plarform_type;
             vf = ppmgr_vf_get_dec();
+            if(!vf)
+                break;
             if (vf && ppmgr_device.started) {
                 if (!(vf->type & (VIDTYPE_VIU_422 | VIDTYPE_VIU_444 | VIDTYPE_VIU_NV21)) || (vf->type & VIDTYPE_INTERLACE) || ppmgr_device.disable_prot
 #ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER
@@ -2398,6 +2404,8 @@ static int ppmgr_task(void *data)
 #else
             int ret = 0;
             vf = ppmgr_vf_get_dec();
+            if(!vf)
+                break;            
             if (vf && ppmgr_device.started) {
                 if (!(vf->type & (VIDTYPE_VIU_422 | VIDTYPE_VIU_444 | VIDTYPE_VIU_NV21)) || (vf->type & VIDTYPE_INTERLACE) || ppmgr_device.disable_prot
 #ifdef CONFIG_POST_PROCESS_MANAGER_PPSCALER

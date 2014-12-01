@@ -241,9 +241,12 @@ static void *mc_cpu_addr;
 #define MC_TOTAL_SIZE       (20*SZ_1K)
 #define MC_SWAP_SIZE        ( 4*SZ_1K)
 
+#define MODE_ERROR 0
+#define MODE_FULL  1
+
 static DEFINE_SPINLOCK(lock);
 
-static int vh264_stop(void);
+static int vh264_stop(int mode);
 static s32 vh264_init(void);
 extern u32 set_blackout_policy(int policy);
 extern u32 get_blackout_policy(void);
@@ -577,7 +580,7 @@ static void vh264_set_params(void)
     unsigned int post_canvas;
     unsigned int frame_mbs_only_flag;
     unsigned int chroma_format_idc, chroma444;
-    unsigned int crop_infor, crop_bottom;
+    unsigned int crop_infor, crop_bottom,crop_right;
 
 
     buffer_for_recycle_rd = 0;
@@ -608,6 +611,7 @@ static void vh264_set_params(void)
        @AV_SCRATCH_6.15-0   =  (top << 8  | bottom ) <<  (2 - frame_mbs_only_flag) */
     crop_infor = READ_VREG(AV_SCRATCH_6);
     crop_bottom = (crop_infor & 0xff) >> (2 - frame_mbs_only_flag);
+    crop_right      = ((crop_infor >>16) & 0xff) >> (2 - frame_mbs_only_flag);
 
     /* if width or height from outside is not equal to mb, then use mb */
     /* add: for seeking stream with other resolution */
@@ -622,16 +626,18 @@ static void vh264_set_params(void)
     last_mb_width = mb_width;
     last_mb_height = mb_height;
 
-    if ((frame_width == 0) ||( frame_height == 0) ||(crop_infor && frame_height &&frame_width)) {
+    if ((frame_width == 0) ||( frame_height == 0) ||crop_infor) {
         frame_width = mb_width << 4;
         frame_height = mb_height << 4;
         if (frame_mbs_only_flag) {
             frame_height = frame_height - (2>>chroma444)*min(crop_bottom, (unsigned int)((8<<chroma444)-1));
+            frame_width  = frame_width - (2>>chroma444)*min(crop_right, (unsigned int)((8<<chroma444)-1));
         } else {
             frame_height = frame_height - (4>>chroma444)*min(crop_bottom, (unsigned int)((8<<chroma444)-1));
+            frame_width   = frame_width - (4>>chroma444)*min(crop_right, (unsigned int)((8<<chroma444)-1));			
         }
-        printk("frame_mbs_only_flag %d, crop_bottom %d, frame_height %d, mb_height %d\n",
-            frame_mbs_only_flag, crop_bottom, frame_height, mb_height);
+        printk("frame_mbs_only_flag %d, crop_bottom %d,  frame_height %d, mb_height %d,crop_right %d, frame_width %d, mb_width %d\n",
+            frame_mbs_only_flag, crop_bottom,frame_height, mb_height,crop_right,frame_width, mb_height);
 
         if (frame_height == 1088) {
             frame_height = 1080;
@@ -1085,7 +1091,7 @@ static void vh264_isr(void)
                             unsigned int old_duration=frame_dur;
                             h264pts2 = pts;
 
-                            pts_duration = ((h264pts2 - h264pts1) / h264_pts_count) * 16 / 15;
+                            pts_duration = (h264pts2 - h264pts1) * 16 / (h264_pts_count * 15);
 
 							if ((pts_duration != frame_dur) && (!pts_outside)) {
 								if(use_idr_framerate)
@@ -1738,6 +1744,9 @@ static s32 vh264_init(void)
     vf_provider_init(&vh264_vf_prov, PROVIDER_NAME, &vh264_vf_provider_ops, NULL);
     vf_reg_provider(&vh264_vf_prov);
  #endif
+
+    vf_notify_receiver(PROVIDER_NAME, VFRAME_EVENT_PROVIDER_FR_HINT, (void *)frame_dur);
+
     stat |= STAT_VF_HOOK;
 
     recycle_timer.data = (ulong) & recycle_timer;
@@ -1763,7 +1772,7 @@ static s32 vh264_init(void)
     return 0;
 }
 
-static int vh264_stop(void)
+static int vh264_stop(int mode)
 {
     if (stat & STAT_VDEC_RUN) {
         amvdec_stop();
@@ -1784,6 +1793,9 @@ static int vh264_stop(void)
 
     if (stat & STAT_VF_HOOK) {
         ulong flags;
+        if (mode == MODE_FULL) {
+            vf_notify_receiver(PROVIDER_NAME, VFRAME_EVENT_PROVIDER_FR_END_HINT, NULL);
+        }
         spin_lock_irqsave(&lock, flags);
         fill_ptr = get_ptr = put_ptr = 0;
         spin_unlock_irqrestore(&lock, flags);
@@ -1814,7 +1826,7 @@ static void error_do_work(struct work_struct *work)
     if (atomic_read(&vh264_active)) {
         int blackout_policy = get_blackout_policy();
         set_blackout_policy(0);
-        vh264_stop();
+        vh264_stop(MODE_ERROR);
         vh264_init();
         set_blackout_policy(blackout_policy);
     }
@@ -2027,10 +2039,11 @@ static int amvdec_h264_probe(struct platform_device *pdev)
 
 static int amvdec_h264_remove(struct platform_device *pdev)
 {
-     cancel_work_sync(&error_wd_work);
-     cancel_work_sync(&stream_switching_work);
+    cancel_work_sync(&error_wd_work);
+    cancel_work_sync(&stream_switching_work);
+
     mutex_lock(&vh264_mutex);
-    vh264_stop();
+    vh264_stop(MODE_FULL);
 
     atomic_set(&vh264_active, 0);
 

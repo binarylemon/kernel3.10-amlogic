@@ -48,6 +48,11 @@
 
 #include "../amports/streambuf.h"
 
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6
+#include <mach/mod_gate.h>
+#include <mach/power_gate.h>
+#endif
+
 #define ENABLE_SEC_BUFF_WATCHDOG
 #define USE_AHB_MODE
 
@@ -1406,6 +1411,7 @@ static int dmx_enable(struct aml_dmx *dmx)
 			(1<<VIDEO_PACKET)               |
 			(1<<AUDIO_PACKET)               |
 			(1<<SUB_PACKET)                 |
+			(1<<SCR_ONLY_PACKET)		|
 			(1<<OTHER_PES_PACKET));
 	 	DMX_WRITE_REG(dmx->id, PES_STRONG_SYNC, 0x1234);
  		DMX_WRITE_REG(dmx->id, DEMUX_ENDIAN,
@@ -1482,6 +1488,9 @@ static u32 dmx_get_chan_target(struct aml_dmx *dmx, int cid)
 			case DMX_PES_SUBTITLE:
 			case DMX_PES_TELETEXT:
 				type = SUB_PACKET;
+			break;
+			case DMX_PES_PCR:
+				type=SCR_ONLY_PACKET;
 			break;
 			default:
 				type = OTHER_PES_PACKET;
@@ -2019,11 +2028,14 @@ static int alloc_subtitle_pes_buffer(struct aml_dmx * dmx)
 	sbuff=get_stream_buffer(BUF_TYPE_SUBTITLE);
 	if(sbuff)
 	{
-		 phy_addr = sbuff->buf_start;
+		if (sbuff->flag & BUF_FLAG_IOMEM)
+			phy_addr = sbuff->buf_start;
+		else
+			phy_addr = virt_to_phys((void *)sbuff->buf_start);
 
-        	WRITE_MPEG_REG(PARSER_SUB_RP, phy_addr);
-        	WRITE_MPEG_REG(PARSER_SUB_START_PTR, phy_addr);
-        	WRITE_MPEG_REG(PARSER_SUB_END_PTR, phy_addr + sbuff->buf_size - 8);
+		WRITE_MPEG_REG(PARSER_SUB_RP, phy_addr);
+		WRITE_MPEG_REG(PARSER_SUB_START_PTR, phy_addr);
+		WRITE_MPEG_REG(PARSER_SUB_END_PTR, phy_addr + sbuff->buf_size - 8);
 
 		pr_dbg("pes buff=:%x %x\n",phy_addr,sbuff->buf_size);
 	}
@@ -2372,6 +2384,11 @@ int aml_asyncfifo_hw_init(struct aml_asyncfifo *afifo)
 
 	/*Async FIFO initialize*/
 	spin_lock_irqsave(&dvb->slock, flags);
+	
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+	CLK_GATE_ON(ASYNC_FIFO);
+#endif
+
 	ret = async_fifo_init(afifo);
 	spin_unlock_irqrestore(&dvb->slock, flags);
 
@@ -2385,6 +2402,11 @@ int aml_asyncfifo_hw_deinit(struct aml_asyncfifo *afifo)
 	int ret;
 	spin_lock_irqsave(&dvb->slock, flags);
 	ret = async_fifo_deinit(afifo);
+
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8
+	CLK_GATE_OFF(ASYNC_FIFO);
+#endif
+
 	spin_unlock_irqrestore(&dvb->slock, flags);
 
 	return ret;

@@ -12,5 +12,5 @@ obj-y	+= touchscreen/
 obj-y	+= simcard_detect/
 obj-y	+= holdkey/
 obj-y   += call_key/
-#obj-y   += sensor/
+obj-y   += sensor/
 obj-y   += gpio_key/

@@ -4,6 +4,7 @@
 //$$ REMOVE 1
 void root_func(){
 //$$ ADD /{
+	amlogic-dt-id = "m8b_m201_1G";
 	compatible = "AMLOGIC,8726_M8B";
 	model = "AMLOGIC";
 	interrupt-parent = <&gic>;
@@ -130,12 +131,12 @@ void root_func(){
 		compatible = "amlogic,mesonfb";
 		dev_name = "mesonfb";
 		status = "okay";
-	   	reserve-memory = <0x01800000  0x00100000>;
-	   	reserve-iomap = "true";
-                vmode = <3>; /**0:VMODE_720P 1:VMODE_LCD  2:VMODE_LVDS_1080P 3:VMODE_1080P*/
+		reserve-memory = <0x00800000 0x00100000>;
+		reserve-iomap = "true";
+	        vmode = <3>; /**0:VMODE_720P 1:VMODE_LCD  2:VMODE_LVDS_1080P 3:VMODE_1080P*/
 		scale_mode = <1>; /*0:default 1:new*/
 		4k2k_fb = <0>;
- 		display_size_default = <1920 1080 1920 3240 32>; //1920*1080*4*3 = 0x17BB000
+	        display_size_default = <1280 720 1280 1440 32>;  // osd0:8M, osd1:1m  1280*720*4*3 = 11,059,200
 	};
 
 //$$ DEVICE="deinterlace"
@@ -712,7 +713,7 @@ void root_func(){
 		reg = <0xc1108d20 0x20>;
 		device_id = <4>;
 		pinctrl-names="default";
-//		pinctrl-0=<&d_i2c_master>;
+		pinctrl-0=<&d_i2c_master>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		use_pio = <0>;
@@ -735,7 +736,7 @@ void root_func(){
 //$$ L2 PROP_U32 16*3 = "dvfs_table"
         vcck_dvfs {
             dvfs_id     = <1>;                                  /** must be value of (1 << n)            */
-            table_count = <12>;                                 /** must be correct count for dvfs_table */
+            table_count = <13>;                                 /** must be correct count for dvfs_table */
             dvfs_table  = <
             /* NOTE: frequent in this table must be ascending order */
             /* frequent(Khz)    min_uV      max_uV                  */
@@ -749,8 +750,9 @@ void root_func(){
                  816000         900000      900000
                 1008000         920000      920000
                 1200000         970000      970000
-                1320000        1050000     1050000
+                1320000        1100000     1100000
                 1488000        1100000     1100000
+                1536000        1140000     1140000
             >;
         };
     };
@@ -1223,7 +1225,7 @@ void root_func(){
 //$$ L2 PROP_U32 = "offset"
 //$$ L2 PROP_U32 = "size"
 		ubootenv:ubootenv{
-		      name = "ubootenv";
+			name = "ubootenv";
 		      offset = <0x100000>;
 		      size = <0x10000>;
 		};
@@ -1297,7 +1299,7 @@ void root_func(){
         trip_point=<70 1488001 1488001 511 511 3 2
                     80 1200001 1200001 435 435 2 2
                     90  800001  800001 328 328 1 1
-                    110 0xffffffff 0xffffffff 0xffffffff 0xffffffff 0xffffffff 0xffffffff>;
+                    260 0xffffffff 0xffffffff 0xffffffff 0xffffffff 0xffffffff 0xffffffff>;
 		cpu_cali_a=<0>;
 		idle_interval=<1000>;
         use_virtual_thermal;
@@ -1487,6 +1489,7 @@ void root_func(){
 //$$ L2 PROP_STR = "status"
     cpufreq-meson{
         compatible = "amlogic,cpufreq-meson";
+        syspll_fixed;
         status = "okay";
     };
 
@@ -1850,10 +1853,11 @@ sdhc_sd_clk_cmd_pins:sdhc_sd_clk_cmd_pins{
 // MATCH "I2C_D_pin_match" = "&d_i2c_master"
 // L2 PROP_U32 2 = "amlogic,setmask"
 // L2 PROP_STR 2 = "amlogic,pins"
-//		d_i2c_master:d_i2c{
-//			amlogic,setmask=<4 0xc>;
-//			amlogic,pins="GPIOH_7","GPIOH_8";
-//		};
+		d_i2c_master:d_i2c{
+			amlogic,setmask=<4 0xc>;
+			amlogic,clrmask=<6 0x3000>;
+			amlogic,pins="GPIOH_7","GPIOH_8";
+		};
 
 //$$ MATCH "remote_pin_0_match" = "&remote_pins"
 //$$ L2 PROP_U32 2 = "amlogic,setmask"
@@ -1893,6 +1897,27 @@ sdhc_sd_clk_cmd_pins:sdhc_sd_clk_cmd_pins{
 			amlogic,pins="GPIODV_9";
 		};
 
+//$$ MATCH "dvb_p_ts0_pins_match" = "&dvb_p_ts0_pins"
+//$$ L2 PROP_U32 1 = "amlogic,setmask"
+//$$ L2 PROP_U32 2 = "amlogic,clrmask"
+//$$ L2 PROP_STR 11 = "amlogic,pins"
+		dvb_p_ts0_pins: dvb_p_ts0_pins {
+			amlogic,setmask = <3 0x37>;
+			amlogic,clrmask = <5 0xC0
+								9 0x37C>;
+			amlogic,pins = "GPIOY_9","GPIOY_10","GPIOY_11","GPIOY_12","GPIOY_13","GPIOY_14","GPIOY_6","GPIOY_7","GPIOY_0","GPIOY_1","GPIOY_8";
+		};
+
+//$$ MATCH "dvb_s_ts0_pins_match" = "&dvb_s_ts0_pins"
+//$$ L2 PROP_U32 1 = "amlogic,setmask"
+//$$ L2 PROP_U32 1 = "amlogic,clrmask"
+//$$ L2 PROP_STR 4 = "amlogic,pins"
+		dvb_s_ts0_pins: dvb_s_ts0_pins {
+			amlogic,setmask = <3 0x17>;
+			amlogic,clrmask = <9 0x378>;
+			amlogic,pins = "GPIOY_9","GPIOY_0","GPIOY_1","GPIOY_8";
+		};
+
 	};
 /// ***************************************************************************************
 ///	-	Ethernet
@@ -1907,5 +1932,71 @@ sdhc_sd_clk_cmd_pins:sdhc_sd_clk_cmd_pins{
 		interruptnum = <40>;
 		new_maclogic = <1>;
 	};
+
+/// ***************************************************************************************
+///	-	RNG
+//$$ MODULE="RNG"
+//$$ DEVICE="meson-rng"
+//$$ L2 PROP_STR = "status"
+	meson-rng{
+		compatible = "amlogic,meson-rng";
+		status = "ok";
+	};
+///	-	DVB
+//$$ MODULE="DVB"
+
+//$$ DEVICE="dvb"
+//$$ L2 PROP_STR = "ts0"
+//$$ L2 PROP_U32 = "ts0_invert"
+//$$ L2 PROP_U32 = "ts0_control"
+//$$ L2 PROP_STR 6 = "pinctrl-names"
+//$$ L2 PROP_CHOICE "dvb_p_ts0_pins_match" = "pinctrl-0"
+//$$ L2 PROP_CHOICE "dvb_s_ts0_pins_match" = "pinctrl-1"
+	dvb{
+		compatible = "amlogic,dvb";
+		/*"parallel","serial","disable"*/
+		ts0 = "parallel";
+		ts0_control = <0>;
+		ts0_invert = <0>;
+		pinctrl-names = "p_ts0", "s_ts0";
+		pinctrl-0 = <&dvb_p_ts0_pins>;
+		pinctrl-1 = <&dvb_s_ts0_pins>;
+	};
+
+//$$ DEVICE="dvbfe"
+//$$ L2 PROP_STR = "dtv_demod0"
+//$$ L2 PROP_U32 = "dtv_demod0_i2c_adap_id"
+//$$ L2 PROP_U32 = "dtv_demod0_i2c_addr"
+//$$ L2 PROP_U32 = "dtv_demod0_reset_value"
+//$$ L2 PROP_STR = "dtv_demod0_reset_gpio"
+//$$ L2 PROP_U32 = "fe0_dtv_demod"
+//$$ L2 PROP_U32 = "fe0_ts"
+//$$ L2 PROP_U32 = "fe0_dev"
+//$$ L2 PROP_STR 6 = "pinctrl-names"
+//$$ L2 PROP_CHOICE "dvb_fe_pins_match" = "pinctrl-0"
+	dvbfe{
+		compatible = "amlogic,dvbfe";
+		dtv_demod0 = "Si2168";
+		dtv_demod0_i2c_adap_id = <4>;
+		dtv_demod0_i2c_addr = <0x64>;
+		dtv_demod0_reset_value = <0>;
+		dtv_demod0_reset_gpio = "GPIOY_3";
+		fe0_dtv_demod = <0>;
+		fe0_ts = <0>;
+		fe0_dev = <0>;
+	};
+
+/*	dvbfe{
+		compatible = "amlogic,dvbfe";
+		dtv_demod0 = "Mxl101";
+		dtv_demod0_i2c_adap_id = <4>;
+		dtv_demod0_i2c_addr = <0x60>;
+		dtv_demod0_reset_value = <0>;
+		dtv_demod0_reset_gpio = "GPIOY_3";
+		fe0_dtv_demod = <0>;
+		fe0_ts = <0>;
+		fe0_dev = <0>;
+	};
+*/
 
 }; /* end of / */

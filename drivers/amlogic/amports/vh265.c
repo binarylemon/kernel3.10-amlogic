@@ -2734,6 +2734,22 @@ static hevc_stru_t gHevc;
     
 static param_t  rpm_param;
 
+static void hevc_local_uninit(void)
+{
+    if(gHevc.rpm_ptr){
+        iounmap(gHevc.rpm_ptr);
+        gHevc.rpm_ptr = NULL;
+    }
+    if(gHevc.lmem_ptr){
+        iounmap(gHevc.lmem_ptr);
+        gHevc.lmem_ptr = NULL;
+    }
+    if(gHevc.debug_ptr){
+        iounmap(gHevc.debug_ptr);
+        gHevc.debug_ptr = NULL;
+    }
+}
+
 static int hevc_local_init(void)
 {
     int ret = -1;
@@ -2758,6 +2774,11 @@ static int hevc_local_init(void)
     bit_depth_chroma = 8;
     
     if((debug&H265_DEBUG_SEND_PARAM_WITH_REG)==0){
+        if(gHevc.rpm_ptr){
+            iounmap(gHevc.rpm_ptr);
+            gHevc.rpm_ptr = NULL;
+        }
+        
         gHevc.rpm_ptr = (unsigned short*)ioremap_nocache(cur_buf_info->rpm.buf_start, cur_buf_info->rpm.buf_size);
         if (!gHevc.rpm_ptr) {
                 printk("%s: failed to remap rpm.buf_start\n", __func__);
@@ -2766,6 +2787,15 @@ static int hevc_local_init(void)
     }    
 
     if(debug&H265_DEBUG_UCODE){
+        if(gHevc.lmem_ptr){
+            iounmap(gHevc.lmem_ptr);
+            gHevc.lmem_ptr = NULL;
+        }
+        if(gHevc.debug_ptr){
+            iounmap(gHevc.debug_ptr);
+            gHevc.debug_ptr = NULL;
+        }
+        
         gHevc.lmem_ptr = (unsigned short*)ioremap_nocache(cur_buf_info->lmem.buf_start, cur_buf_info->lmem.buf_size);
         if (!gHevc.lmem_ptr) {
                 printk("%s: failed to remap lmem.buf_start\n", __func__);
@@ -2934,6 +2964,7 @@ static void vh265_vf_put(vframe_t *vf, void* op_arg)
 static int vh265_event_cb(int type, void *data, void *private_data)
 {
     if(type & VFRAME_EVENT_RECEIVER_RESET){
+#if 0
         unsigned long flags;
         amhevc_stop();
 #ifndef CONFIG_POST_PROCESS_MANAGER
@@ -2947,6 +2978,7 @@ static int vh265_event_cb(int type, void *data, void *private_data)
         vf_reg_provider(&vh265_vf_prov);
 #endif
         amhevc_start();
+#endif        
     }
 
     return 0;
@@ -3451,6 +3483,7 @@ static void vh265_put_timer_func(unsigned long arg)
 {
     struct timer_list *timer = (struct timer_list *)arg;
     unsigned char empty_flag;
+    unsigned int buf_level;	
 
     receviver_start_e state = RECEIVER_INACTIVE;
     
@@ -3472,8 +3505,10 @@ static void vh265_put_timer_func(unsigned long arg)
     if (empty_flag == 0){
         // decoder has input
         if((debug&H265_DEBUG_DIS_LOC_ERROR_PROC)==0){
+
+	buf_level = READ_VREG(HEVC_STREAM_LEVEL);
             if((state == RECEIVER_INACTIVE) &&                       // receiver has no buffer to recycle
-                (kfifo_is_empty(&display_q))                        // no buffer in display queue
+                (kfifo_is_empty(&display_q)&& buf_level>0x200)                        // no buffer in display queue  .not to do error recover when buf_level is low
                 ){
                 if(gHevc.error_flag==0){
                     error_watchdog_count++;
@@ -3704,7 +3739,7 @@ static int vh265_local_init(void)
     reserved_buffer = 0;
 
     ret = hevc_local_init();
-
+    
     return ret;
 }
 
@@ -3758,6 +3793,8 @@ static s32 vh265_init(void)
     vf_provider_init(&vh265_vf_prov, PROVIDER_NAME, &vh265_vf_provider, NULL);
     vf_reg_provider(&vh265_vf_prov);
     vf_notify_receiver(PROVIDER_NAME,VFRAME_EVENT_PROVIDER_START,NULL);
+
+    vf_notify_receiver(PROVIDER_NAME, VFRAME_EVENT_PROVIDER_FR_HINT, (void *)frame_dur);
 
     stat |= STAT_VF_HOOK;
 
@@ -3826,10 +3863,14 @@ static int vh265_stop(void)
     }
 
     if (stat & STAT_VF_HOOK) {
+        vf_notify_receiver(PROVIDER_NAME, VFRAME_EVENT_PROVIDER_FR_END_HINT, NULL);
+
         vf_unreg_provider(&vh265_vf_prov);
         stat &= ~STAT_VF_HOOK;
     }
 
+    //hevc_local_uninit();
+    
     if(use_cma){
         uninit_list = 1;
         up(&h265_sema);
@@ -3881,6 +3922,7 @@ static int amvdec_h265_probe(struct platform_device *pdev)
 
     if (vh265_init() < 0) {
         printk("\namvdec_h265 init failed.\n");
+        hevc_local_uninit();
         mutex_unlock(&vh265_mutex);
         return -ENODEV;
     }

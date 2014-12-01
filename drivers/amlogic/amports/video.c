@@ -591,6 +591,10 @@ static u32 force_blackout = 0;
 /* disable video */
 static u32 disable_video = VIDEO_DISABLE_NONE;
 
+/* show first frame*/
+static bool show_first_frame_nosync=true;
+//static bool first_frame=false;
+
 /* test screen*/
 static u32 test_screen = 0;
 
@@ -606,6 +610,8 @@ static const vinfo_t *vinfo = NULL;
 static vframe_t *cur_dispbuf = NULL;
 static vframe_t vf_local;
 static u32 vsync_pts_inc;
+static u32 vsync_pts_inc_scale;
+static u32 vsync_pts_inc_scale_base = 1;
 static u32 vsync_pts_inc_upint = 0;
 static u32 vsync_pts_inc_adj = 0;
 static u32 vsync_pts_125 = 0;
@@ -794,11 +800,11 @@ int ge2d_store_frame(ulong yaddr,ulong uaddr,u32 ydupindex,u32 udupindex)
     canvas_config(ydupindex,
         (ulong)yaddr,
         cs0.width, cs0.height,
-        CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_32X32);
+        CANVAS_ADDR_NOWRAP, cs0.blkmode);
     canvas_config(udupindex,
         (ulong)uaddr,
         cs1.width, cs1.height,
-        CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_32X32);
+        CANVAS_ADDR_NOWRAP, cs1.blkmode);
 
     canvas_read(ydupindex,&cyd);
 
@@ -2214,6 +2220,8 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
     vdin_v4l2_ops_t *vdin_ops = NULL;
     vdin_arg_t arg;
 #endif
+	bool show_nosync=false;
+
 #ifdef CONFIG_AM_VIDEO_LOG
     int toggle_cnt;
 #endif
@@ -2225,7 +2233,9 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
         if(cur_dev_idx == 0){
             cur_dev = &video_dev[0];
             vinfo = get_current_vinfo();
-    	      vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+    	    vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+            vsync_pts_inc_scale = vinfo->sync_duration_den;
+            vsync_pts_inc_scale_base = vinfo->sync_duration_num;
             video_property_changed = true;
             printk("Change to video 0\n");
         }
@@ -2234,12 +2244,13 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
         if(cur_dev_idx != 0){
             cur_dev = &video_dev[1];
             vinfo = get_current_vinfo2();
-    	      vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+    	    vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+            vsync_pts_inc_scale = vinfo->sync_duration_den;
+            vsync_pts_inc_scale_base = vinfo->sync_duration_num;
             video_property_changed = true;
             printk("Change to video 1\n");
         }
     }
-
 
     if((dev_id_s[dev_id_len-1] == '2' && cur_dev_idx == 0) ||
         (dev_id_s[dev_id_len-1] != '2' && cur_dev_idx != 0)){
@@ -2247,6 +2258,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
     }
     //printk("%s: %s\n", __func__, dev_id_s);
 #endif
+
     vf = video_vf_peek();
     if((vf)&&((vf->type & VIDTYPE_NO_VIDEO_ENABLE) == 0)){
 	    if( (old_vmode != new_vmode)||(debug_flag == 8)){
@@ -2330,8 +2342,12 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
             printk("invalid vsync_slow_factor, set to 1\n");
             vsync_slow_factor = 1;
         }
-        timestamp_pcrscr_inc(vsync_pts_inc / vsync_slow_factor);
-        timestamp_apts_inc(vsync_pts_inc / vsync_slow_factor);
+
+        if (vsync_slow_factor == 1) {
+            timestamp_pcrscr_inc_scale(vsync_pts_inc_scale, vsync_pts_inc_scale_base);
+        } else {
+            timestamp_pcrscr_inc(vsync_pts_inc / vsync_slow_factor);
+        }
     }
     if (omx_secret_mode == true) {
         u32 system_time = timestamp_pcrscr_get();
@@ -2423,10 +2439,14 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
             tsync_avevent_locked(VIDEO_START,
                           (vf->pts) ? vf->pts : timestamp_vpts_get());
 
+
 #ifdef SLOW_SYNC_REPEAT
             frame_repeat_count = 0;
 #endif
 
+	     if(show_first_frame_nosync)
+	   	  show_nosync=true;
+	   	
         } else if ((cur_dispbuf == &vf_local) && (video_property_changed)) {
             if (!(blackout|force_blackout)) {
         			if((READ_VCBUS_REG(DI_IF1_GEN_REG)&0x1)==0)
@@ -2457,7 +2477,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
     }
 
     while (vf) {
-        if (vpts_expire(cur_dispbuf, vf)) {
+        if (vpts_expire(cur_dispbuf, vf)||show_nosync) {
             amlog_mask(LOG_MASK_TIMESTAMP,
                        "VIDEO_PTS = 0x%x, cur_dur=0x%x, next_pts=0x%x, scr = 0x%x\n",
                        timestamp_vpts_get(),
@@ -2769,7 +2789,6 @@ SET_FILTER:
     }
 
 exit:
-
     if (likely(video_onoff_state != VIDEO_ENABLE_STATE_IDLE)) {
         /* state change for video layer enable/disable */
 
@@ -3148,6 +3167,9 @@ static int video_receiver_event_fun(int type, void* data, void* private_data)
         set_clone_frame_rate(android_clone_rate, 200);
 #endif
     }
+    else if(type == VFRAME_EVENT_PROVIDER_RESET) {
+        video_vf_light_unreg_provider();
+    }
     else if(type == VFRAME_EVENT_PROVIDER_LIGHT_UNREG){
         video_vf_light_unreg_provider();
     }
@@ -3177,6 +3199,12 @@ static int video_receiver_event_fun(int type, void* data, void* private_data)
         if(debug_flag& DEBUG_FLAG_BLACKOUT){
             printk("%s VFRAME_EVENT_PROVIDER_FORCE_BLACKOUT\n", __func__);
         }
+    }
+    else if(type == VFRAME_EVENT_PROVIDER_FR_HINT){
+        set_vframe_rate_hint((int)data);
+    }
+    else if(type == VFRAME_EVENT_PROVIDER_FR_END_HINT){
+        set_vframe_rate_end_hint();
     }
     return 0;
 }
@@ -3259,7 +3287,8 @@ unsigned int vf_keep_current(void)
     	printk("%s %lx %x\n", __func__, keep_y_addr, canvas_get_addr(y_index));
     }
 
-    if ((cur_dispbuf->type & VIDTYPE_VIU_422) == VIDTYPE_VIU_422) {
+    if ((cur_dispbuf->type & VIDTYPE_VIU_422) == VIDTYPE_VIU_422) { 
+        return -1;  //no VIDTYPE_VIU_422 type frame need keep,avoid memcpy crash
         canvas_read(y_index,&cd);
         if ((Y_BUFFER_SIZE < (cd.width *cd.height))) {
             printk("## [%s::%d] error: yuv data size larger than buf size: %x,%x,%x, %x,%x\n", __FUNCTION__,__LINE__,
@@ -4151,7 +4180,9 @@ static ssize_t video_zoom_store(struct class *cla, struct class_attribute *attr,
 
 static ssize_t video_screen_mode_show(struct class *cla, struct class_attribute *attr, char *buf)
 {
-    const char *wide_str[] = {"normal", "full stretch", "4-3", "16-9", "non-linear", "normal-noscaleup"};
+    const char *wide_str[] = {"normal", "full stretch", "4-3", "16-9", "non-linear", "normal-noscaleup",
+			"4-3 ignore", "4-3 letter box", "4-3 pan scan", "4-3 combined",
+			"16-9 ignore", "16-9 letter box", "16-9 pan scan", "16-9 combined"};
 
     if (wide_setting < ARRAY_SIZE(wide_str)) {
         return sprintf(buf, "%d:%s\n", wide_setting, wide_str[wide_setting]);
@@ -4870,6 +4901,30 @@ static ssize_t video_angle_store(struct class *cla, struct class_attribute *attr
     return strnlen(buf, count);
 }
 
+static ssize_t show_first_frame_nosync_show(struct class *cla, struct class_attribute *attr, char *buf)
+{
+    return sprintf(buf, "%d\n", show_first_frame_nosync?1:0);
+}
+
+static ssize_t show_first_frame_nosync_store(struct class *cla, struct class_attribute *attr, const char *buf,
+                                   size_t count)
+{
+    size_t r;
+    int value;    
+
+    r = sscanf(buf, "%d", &value);
+
+    if (r != 1) {
+        return -EINVAL;
+    }
+
+    if(value==0)
+	show_first_frame_nosync=false;
+    else
+	show_first_frame_nosync=true;
+
+    return count;
+}
 static struct class_attribute amvideo_class_attrs[] = {
     __ATTR(axis,
     S_IRUGO | S_IWUSR | S_IWGRP,
@@ -4970,6 +5025,10 @@ static struct class_attribute amvideo_class_attrs[] = {
     __ATTR(stereo_scaler,
     S_IRUGO|S_IWUSR,NULL,
     video_3d_scale_store),
+   __ATTR(show_first_frame_nosync,
+    S_IRUGO | S_IWUSR,
+    show_first_frame_nosync_show,
+    show_first_frame_nosync_store),
     __ATTR_RO(device_resolution),
     __ATTR_RO(frame_addr),
     __ATTR_RO(frame_canvas_width),
@@ -5098,6 +5157,8 @@ int vout_notify_callback(struct notifier_block *block, unsigned long cmd , void 
   	vinfo = info;
 	/* pre-calculate vsync_pts_inc in 90k unit */
     	vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+        vsync_pts_inc_scale = vinfo->sync_duration_den;
+        vsync_pts_inc_scale_base = vinfo->sync_duration_num;
 	spin_unlock_irqrestore(&lock, flags);
 	new_vmode = vinfo->mode;
 	break;
@@ -5129,6 +5190,8 @@ int vout2_notify_callback(struct notifier_block *block, unsigned long cmd , void
   	vinfo = info;
 	/* pre-calculate vsync_pts_inc in 90k unit */
     	vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+        vsync_pts_inc_scale = vinfo->sync_duration_den;
+        vsync_pts_inc_scale_base = vinfo->sync_duration_num;
 	spin_unlock_irqrestore(&lock, flags);
 	break;
 	case VOUT_EVENT_OSD_PREBLEND_ENABLE:
@@ -5176,6 +5239,8 @@ static void vout_hook(void)
 
     if (vinfo) {
         vsync_pts_inc = 90000 * vinfo->sync_duration_den / vinfo->sync_duration_num;
+        vsync_pts_inc_scale = vinfo->sync_duration_den;
+        vsync_pts_inc_scale_base = vinfo->sync_duration_num;
         old_vmode = new_vmode = vinfo->mode;
     }
 
