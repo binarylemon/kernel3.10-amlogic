@@ -34,10 +34,8 @@ obj-y += cpufreq/
 obj-$(CONFIG_GPIO_AMLOGIC) += gpio/
 obj-y += pinctrl/
 
-ifneq ($(wildcard $(srctree)/../hardware/amlogic/nand),)
-	obj-$(CONFIG_AML_NEXT_GEN_NAND) += ../../../hardware/amlogic/nand/amlnf/
-	obj-$(CONFIG_AM_NAND) += ../../../hardware/amlogic/nand/nand/
-endif
+obj-$(CONFIG_AML_NEXT_GEN_NAND) += nand/amlnf/
+obj-$(CONFIG_AM_NAND) += nand/nand/
 
 obj-y += ethernet/
 
@@ -76,8 +74,8 @@ ifneq ($(wildcard $(srctree)/../hardware/amlogic/pmu),)
 endif
 
 obj-y += tvin_v4l2/
-ifneq ($(wildcard $(srctree)/../hardware/tvin),)
-	obj-$(CONFIG_TVIN) += ../../../hardware/tvin/
+ifneq ($(wildcard $(srctree)/drivers/amlogic/tvin),)
+	obj-$(CONFIG_TVIN) += tvin/
 endif
 
 obj-$(CONFIG_AML_EXT_HDMIIN) += ext_hdmiin/
@@ -95,8 +93,8 @@ obj-$(CONFIG_AM_DVB) += dvb_tv/
 obj-$(CONFIG_AM_SMARTCARD) += smartcard/
 
 obj-$(CONFIG_AM_WIFI) += wifi/
-ifneq ($(wildcard $(srctree)/../hardware/wifi),)
-	obj-$(CONFIG_SDIO_DHD_CDC_WIFI_40181_MODULE) += ../../../hardware/wifi/broadcom/drivers/ap6xxx/broadcm_40181/
+ifneq ($(wildcard $(srctree)/drivers/amlogic/wifi),)
+	obj-$(CONFIG_SDIO_DHD_CDC_WIFI_40181_MODULE) += wifi/broadcom/drivers/ap6xxx/broadcm_40181/
 	obj-$(CONFIG_BCMDHD) += ../../../hardware/wifi/broadcom/drivers/usi/bcmdhd/
 	obj-$(CONFIG_RTL8188EU) += ../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU/
 	obj-$(CONFIG_RTL8188EU_MP) += ../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU_MP/
@@ -122,10 +120,8 @@ obj-$(CONFIG_AML_REG_DEBUG) += regd/
 
 obj-$(CONFIG_AML_WATCHDOG) += watchdog/
 
-ifneq ($(wildcard $(srctree)/../hardware/arm/gpu),)
-	obj-$(CONFIG_UMP) += ../../../hardware/arm/gpu/ump/
-	obj-$(CONFIG_MALI400) += ../../../hardware/arm/gpu/mali/
-endif
+#obj-$(CONFIG_UMP) += gpu/ump/
+#obj-$(CONFIG_MALI400) += gpu/mali/
 
 obj-$(CONFIG_AMLOGIC_ION) += ion_dev/
 
