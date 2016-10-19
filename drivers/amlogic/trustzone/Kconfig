@@ -1,0 +1,4 @@
+config MESON_TRUSTZONE
+	bool "Secure OS Driver"
+	default n
+

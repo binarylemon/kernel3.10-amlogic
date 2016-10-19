@@ -48,9 +48,12 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include "osd_log.h"
+#include "osd_sync.h"
 #include <linux/amlogic/amlog.h>
 #include <linux/amlogic/logo/logo_dev.h>
 #include <linux/amlogic/logo/logo_dev_osd.h>
+
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 static struct early_suspend early_suspend;
@@ -96,7 +99,11 @@ _find_color_format(struct fb_var_screeninfo * var)
 		lower_margin=COLOR_INDEX_24_6666_A;
 		break;		
 		case 3:
+#ifdef CONFIG_FB_AMLOGIC_UMP
+        upper_margin=COLOR_INDEX_32_ARGB;
+#else
 		upper_margin=COLOR_INDEX_32_ABGR;
+#endif
 		lower_margin=COLOR_INDEX_32_BGRA;
 		break;
 		case 4:
@@ -267,6 +274,12 @@ osd_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	return 0;
 }
 
+#ifdef CONFIG_FB_AMLOGIC_UMP
+int (*disp_get_ump_secure_id) (struct fb_info *info, myfb_dev_t *g_fbi,
+					unsigned long arg, int buf);
+EXPORT_SYMBOL(disp_get_ump_secure_id);
+#endif
+
 static int
 osd_ioctl(struct fb_info *info, unsigned int cmd,
                unsigned long arg)
@@ -283,6 +296,13 @@ osd_ioctl(struct fb_info *info, unsigned int cmd,
 	 u32  block_mode;
         unsigned long  ret;
 	 u32  flush_rate;
+	fb_sync_request_t  sync_request;
+
+
+	unsigned int karg = 0;
+#ifdef CONFIG_FB_AMLOGIC_UMP
+	int secure_id_buf_num = 0;
+#endif
 
     	switch (cmd)
   	{
@@ -298,6 +318,11 @@ osd_ioctl(struct fb_info *info, unsigned int cmd,
 		case FBIOPUT_OSD_SCALE_AXIS:
 			ret=copy_from_user(&osd_axis, argp, 4 * sizeof(s32));
 			break;
+		case FBIOPUT_OSD_SYNC_ADD:
+			ret=copy_from_user(&sync_request,argp,sizeof(fb_sync_request_t));
+			//printk("osd_mai request offset:%d\n", sync_request.offset);
+			break;
+		case FBIO_WAITFORVSYNC:
 		case FBIOGET_OSD_SCALE_AXIS:
 		case FBIOPUT_OSD_ORDER:
 		case FBIOGET_OSD_ORDER:
@@ -328,6 +353,44 @@ osd_ioctl(struct fb_info *info, unsigned int cmd,
 		case FBIOPUT_OSD_WINDOW_AXIS:
 			ret=copy_from_user(&osd_dst_axis, argp, 4 * sizeof(s32));
 			break;
+#ifdef CONFIG_FB_AMLOGIC_UMP
+		case GET_UMP_SECURE_ID_BUF2:	/* flow trough */
+		{
+			secure_id_buf_num = 1;
+			if (!disp_get_ump_secure_id)
+				request_module("osd_ump");
+			if (disp_get_ump_secure_id)
+				return disp_get_ump_secure_id(info, fbdev, arg,
+							      secure_id_buf_num);
+			else
+				return -ENOTSUPP;
+		}
+		break;
+		case GET_UMP_SECURE_ID_BUF1:	/* flow trough */
+		{
+			secure_id_buf_num = 0;
+			if (!disp_get_ump_secure_id)
+				request_module("osd_ump");
+			if (disp_get_ump_secure_id)
+				return disp_get_ump_secure_id(info, fbdev, arg,
+							      secure_id_buf_num);
+			else
+				return -ENOTSUPP;
+		}
+		break;
+#endif
+		case FBIOPUT_OSD2_CURSOR_DATA:
+		{
+			aml_hwc_addr_t para;
+			if (copy_from_user(&karg, argp, sizeof(unsigned int))) {
+				return -EFAULT;
+			}
+			if (copy_from_user(&para, (void __user *)karg, sizeof(aml_hwc_addr_t))) {
+				return -EFAULT;
+			}
+			ret = osddev_copy_data_tocursor(fbdev, &para);
+		}
+		break;
 		default :
 			amlog_mask_level(LOG_MASK_IOCTL,LOG_LEVEL_HIGH,"command not supported\r\n ");
 			return -1;
@@ -458,13 +521,24 @@ osd_ioctl(struct fb_info *info, unsigned int cmd,
 		case FBIOPUT_OSD_WINDOW_AXIS:
 			osddev_set_window_axis(info->node, osd_dst_axis[0], osd_dst_axis[1], osd_dst_axis[2], osd_dst_axis[3]);
 			break;
+		 case FBIOPUT_OSD_SYNC_ADD:
+		 	sync_request.out_fen_fd=osddev_sync_request(info, sync_request.xoffset,sync_request.yoffset,sync_request.in_fen_fd);
+			ret=copy_to_user(argp, &sync_request, sizeof(fb_sync_request_t));
+			if(sync_request.out_fen_fd  <0 ) // fence create fail.
+			ret=-1;
+			break;
+		case FBIO_WAITFORVSYNC:
+			osddev_wait_for_vsync();
+			ret=1;
+			ret=copy_to_user(argp,&ret,sizeof(u32));
+
 		default:
 			break;
     	}
 
    	mutex_unlock(&fbdev->lock);
 	
-	return  0;
+	return  ret;
 }
 static int osd_open(struct fb_info *info, int arg)
 {
@@ -1762,7 +1836,7 @@ osd_probe(struct platform_device *pdev)
 				}
 			}
 			amlog_level(LOG_LEVEL_HIGH,"---------------clear framebuffer%d memory  \r\n",index);
-			memset((char*)fbdev->fb_mem_vaddr, 0x80, fbdev->fb_len);
+			memset((char*)fbdev->fb_mem_vaddr, 0x00, fbdev->fb_len);
 		}
 
 		if (index == OSD0){
@@ -1802,7 +1876,11 @@ osd_probe(struct platform_device *pdev)
 		set_default_display_axis(&fbdev->fb_info->var,&fbdev->osd_ctl,vinfo);
 		osd_check_var(var, fbi);
     		register_framebuffer(fbi);
-		if(NULL==init_logo_obj )//if we have init a logo object ,then no need to setup hardware . 
+		if(index == OSD0 && init_logo_obj != NULL)
+		{
+			osddev_set(fbdev);
+		}
+		else if(NULL==init_logo_obj)//if we have init a logo object ,then no need to setup hardware .
 		{
 			osddev_set(fbdev);
 		}

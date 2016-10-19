@@ -305,7 +305,7 @@ zinstall uinstall install: vmlinux
 	rm  $(firstword $(wildcard $(srctree)/$(boot)/dts/amlogic/$(subst dtb,dts,$@) $(srctree)/$(CUSTOMER_DIR_NAME)/meson/dt/$(subst dtb,dts,$@)))
 
 dtbs: scripts
-	$(Q)$(MAKE) $(build)=$(subst $(wildcard $(srctree)//),,$(subst $(join /,$(subst dtb,dts,$@)),,$(firstword $(wildcard $(srctree)/$(boot)/dts/amlogic/$(subst dtb,dts,$@) $(srctree)/$(CUSTOMER_DIR_NAME)/meson/dt/$(subst dtb,dts,$@))))) \
+	$(Q)$(MAKE) $(build)=$(wildcard $(srctree)/$(boot)/dts/amlogic) \
 	MACHINE=$(MACHINE) \
 	dtbs
 

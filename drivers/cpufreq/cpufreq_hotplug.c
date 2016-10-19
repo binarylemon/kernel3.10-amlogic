@@ -723,9 +723,10 @@ static void hg_check_cpu(int cpu, unsigned int max_load)
 			goto out;
 		}
 	}
-	if (max_load > hg_tuners->up_threshold ||
-		!(avg_load < hg_tuners->down_threshold &&
-		(num_online_cpus() > 1 && hotplug_out_avg_load < hg_tuners->down_threshold))){
+	if (max_load > hg_tuners->up_threshold &&
+		(avg_load < hg_tuners->down_threshold &&
+		(num_online_cpus() > 1 &&
+		 hotplug_out_avg_load < hg_tuners->down_threshold))) {
 		if (num_online_cpus() > 2){
 			i = 0;
 			for(k = 0; k < NR_CPUS; k++){
