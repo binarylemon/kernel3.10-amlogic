@@ -35,7 +35,7 @@ source "drivers/amlogic/usb/Kconfig"
 #source "drivers/amlogic/cardreader/Kconfig"
 source "drivers/amlogic/mmc/Kconfig"
 source "drivers/amlogic/spi_nor/Kconfig"
-isource "../hardware/amlogic/nand/amlnf/Kconfig"
+#isource "../hardware/amlogic/nand/amlnf/Kconfig"
 isource "../hardware/amlogic/nand/nand/Kconfig"
 
 #
@@ -104,11 +104,6 @@ source "drivers/amlogic/ion_dev/Kconfig"
 # crypto
 #
 source "drivers/amlogic/crypto/Kconfig"
-
-#
-# trustzone
-#
-source "drivers/amlogic/trustzone/Kconfig"
 
 source "drivers/amlogic/mhl/Kconfig"
 isource "../hardware/amlogic/pmu/Kconfig"
