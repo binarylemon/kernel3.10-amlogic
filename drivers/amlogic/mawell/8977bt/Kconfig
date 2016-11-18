@@ -1,0 +1,6 @@
+config MW8977_BT
+	tristate "Mawell 8977 bt support"
+	default n
+	---help---
+	  This module adds support for wireless adapters based on
+	  Mawell 8977 chipset.

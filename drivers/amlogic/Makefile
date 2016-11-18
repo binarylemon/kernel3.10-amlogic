@@ -95,6 +95,8 @@ obj-$(CONFIG_AM_DVB) += dvb_tv/
 obj-$(CONFIG_AM_SMARTCARD) += smartcard/
 
 obj-$(CONFIG_AM_WIFI) += wifi/
+obj-$(CONFIG_MW8977_WIFI) += mawell/8977wifi/
+obj-$(CONFIG_MW8977_BT) += mawell/8977bt/
 ifneq ($(wildcard $(srctree)/../hardware/wifi),)
 	obj-$(CONFIG_SDIO_DHD_CDC_WIFI_40181_MODULE) += ../../../hardware/wifi/broadcom/drivers/ap6xxx/broadcm_40181/
 	obj-$(CONFIG_BCMDHD) += ../../../hardware/wifi/broadcom/drivers/usi/bcmdhd/
