@@ -18,6 +18,7 @@
 # ARE EXPRESSLY DISCLAIMED.  The License provides additional details about
 # this warranty disclaimer.
 
+#COMPATDIR=/mnt/nfsroot/weiguang.ruan/android4.4/out/target/product/m200/obj/KERNEL_OBJ
 
 ifneq ($(src),)
 DRIVER_DIR = $(src)
@@ -131,6 +132,7 @@ endif
 
 
 KERNELVERSION_X86 := 	$(shell uname -r)
+#KERNELDIR ?= /mnt/nfsroot/weiguang.ruan/6.0_wpa/out/target/product/p212_43569/obj/KERNEL_OBJ
 KERNELDIR ?= /mnt/nfsroot/weiguang.ruan/linux/buildroot/output/build/linux-custom
 LD += -S
 
@@ -460,7 +462,7 @@ sd8xxx-objs := $(MOALOBJS)
 else
 
 default:
-	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules
+	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules -j8
 
 endif
 
@@ -589,6 +591,7 @@ distclean:
 	-find . -name ".*.cmd" -exec rm {} \;
 	-find . -name "*.mod.c" -exec rm {} \;
 	-rm -rf .tmp_versions
+	-rm -rf modules.builtin
 ifneq ($(APPDIR),)
 ifeq ($(CONFIG_STA_SUPPORT),y)
 	$(MAKE) -C mapp/mlanconfig $@

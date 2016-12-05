@@ -106,7 +106,7 @@ bt8xxx-objs := $(BTOBJS)
 # Otherwise we were called directly from the command line; invoke the kernel build system.
 else
 default:
-	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules
+	$(MAKE) -C $(KERNELDIR) ARCH=arm M=$(PWD) modules -j8
 endif
 
 ###############################################################
@@ -144,6 +144,7 @@ clean:
 	-find . -name "*.symvers" -exec rm {} \;
 	-find . -name "modules.order" -exec rm {} \;
 	-rm -rf .tmp_versions
+	-rm -rf modules.builtin
 	$(MAKE) -C app/fm_app $@
 
 install: default
