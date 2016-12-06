@@ -53,9 +53,7 @@ obj-$(CONFIG_I2C) += i2c/
 obj-$(CONFIG_EFUSE)+=efuse/
 obj-$(CONFIG_AM_INPUT)		+= input/
 
-ifneq ($(wildcard $(srctree)/../hardware/amlogic/touch),)
-obj-$(CONFIG_AML_TOUCH_ALGORITHM_SUPPORT) += ../../../hardware/amlogic/touch/
-endif
+obj-$(CONFIG_AML_TOUCH_ALGORITHM_SUPPORT) += hardware/amlogic/touch/
 obj-$(CONFIG_AMLOGIC_SPI_NOR) += spi_nor/
 
 #obj-$(CONFIG_CARDREADER) += cardreader/
@@ -123,10 +121,8 @@ obj-$(CONFIG_AML_REG_DEBUG) += regd/
 
 obj-$(CONFIG_AML_WATCHDOG) += watchdog/
 
-ifneq ($(wildcard $(srctree)/../hardware/arm/gpu),)
-	obj-$(CONFIG_UMP) += ../../../hardware/arm/gpu/ump/
-	obj-$(CONFIG_MALI400) += ../../../hardware/arm/gpu/mali/
-endif
+obj-$(CONFIG_UMP) += hardware/arm/gpu/ump/
+obj-$(CONFIG_MALI400) += hardware/arm/gpu/mali/
 
 obj-$(CONFIG_AMLOGIC_ION) += ion_dev/
 
