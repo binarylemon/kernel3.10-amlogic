@@ -4,7 +4,6 @@
 //$$ REMOVE 1
 void root_func(){
 //$$ ADD /{
-	amlogic-dt-id = "m8b_a111_256m";
 	compatible = "AMLOGIC,8726_M8B";
 	model = "AMLOGIC";
 	interrupt-parent = <&gic>;
@@ -81,7 +80,7 @@ void root_func(){
 		aml_reserved_start = <0x06000000>; /**reserved memory start */
 		aml_reserved_end = <0x05000000>;/**reserved memory end : dtb start for uboot*/
 		phys_offset = <0x00200000>;
-		linux,total-memory = <0x10000000>;
+		linux,total-memory = <0xfe00000>;
         #address-cells = <1>;
         #size-cells = <1>;
 
