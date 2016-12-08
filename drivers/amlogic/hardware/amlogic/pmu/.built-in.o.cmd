@@ -1,0 +1,1 @@
+cmd_drivers/amlogic/../../../hardware/amlogic/pmu/built-in.o :=  rm -f drivers/amlogic/../../../hardware/amlogic/pmu/built-in.o; /mnt/nfsroot/menhui.zhang/kk-amlogic/a111/buildroot/output/host/usr/bin/arm-linux-gnueabihf-ar rcsD drivers/amlogic/../../../hardware/amlogic/pmu/built-in.o

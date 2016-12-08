@@ -1,0 +1,1 @@
+cmd_drivers/amlogic/../../../hardware/wifi/realtek/drivers/8723bs/rtl8723BS/built-in.o :=  rm -f drivers/amlogic/../../../hardware/wifi/realtek/drivers/8723bs/rtl8723BS/built-in.o; /mnt/nfsroot/menhui.zhang/kk-amlogic/a111/buildroot/output/host/usr/bin/arm-linux-gnueabihf-ar rcsD drivers/amlogic/../../../hardware/wifi/realtek/drivers/8723bs/rtl8723BS/built-in.o

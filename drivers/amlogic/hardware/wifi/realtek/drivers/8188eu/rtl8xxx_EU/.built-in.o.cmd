@@ -1,0 +1,1 @@
+cmd_drivers/amlogic/../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU/built-in.o :=  rm -f drivers/amlogic/../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU/built-in.o; /mnt/nfsroot/menhui.zhang/kk-amlogic/a111/buildroot/output/host/usr/bin/arm-linux-gnueabihf-ar rcsD drivers/amlogic/../../../hardware/wifi/realtek/drivers/8188eu/rtl8xxx_EU/built-in.o

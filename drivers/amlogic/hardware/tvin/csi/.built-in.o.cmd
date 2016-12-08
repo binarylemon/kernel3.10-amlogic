@@ -1,0 +1,1 @@
+cmd_drivers/amlogic/../../../hardware/tvin/csi/built-in.o :=  /mnt/nfsroot/menhui.zhang/kk-amlogic/a111/buildroot/output/host/usr/bin/arm-linux-gnueabihf-ld -EL    -r -o drivers/amlogic/../../../hardware/tvin/csi/built-in.o drivers/amlogic/../../../hardware/tvin/csi/tvin_csi.o ; scripts/mod/modpost drivers/amlogic/../../../hardware/tvin/csi/built-in.o
