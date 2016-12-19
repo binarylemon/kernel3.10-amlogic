@@ -27,9 +27,7 @@ DRIVER_DIR =  $(shell pwd)
 endif
 $(info DRIVER_DIR is $(DRIVER_DIR))
 
-COMPATDIR=/mnt/nfsroot/weiguang.ruan/linux/buildroot/output/build/linux-custom
-CROSS_COMPILE=arm-linux-gnueabihf-
-CC=		$(CROSS_COMPILE)gcc -I$(COMPATDIR)
+CC=		$(CROSS_COMPILE)gcc
 LD=		$(CROSS_COMPILE)ld
 BACKUP=		/root/backup
 YMD=		`date +%Y%m%d%H%M`

@@ -2,7 +2,6 @@
 # Copyright (C) 2007-2016, Marvell International Ltd.
 #
 
-CROSS_COMPILE=arm-linux-gnueabihf-
 CC=		$(CROSS_COMPILE)gcc
 LD=		$(CROSS_COMPILE)ld
 
