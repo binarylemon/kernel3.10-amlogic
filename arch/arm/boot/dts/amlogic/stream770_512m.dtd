@@ -512,6 +512,7 @@ void root_func(){
 //$$ L2 PROP_STR = "status"
 //$$ L3 PROP_U32 2="reg"
 //$$ L3 PROP_STR = "pinctrl-names"
+//$$ L2 PROP_CHOICE "I2C_C_pin_match" = "pinctrl-0"
     i2c@c11087e0{ /*I2C-C*/
 		compatible = "amlogic,aml_i2c";
 		dev_name = "i2c-C";
@@ -519,11 +520,11 @@ void root_func(){
 		reg = <0xc11087e0 0x20>;
 		device_id = <3>;
 		pinctrl-names="default";
-//		pinctrl-0=<&c_i2c_master>;
+		pinctrl-0=<&c_i2c_master>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		use_pio = <0>;
-		master_i2c_speed = <300000>;
+		master_i2c_speed = <100000>;
 	};
 
 //$$ DEVICE="I2C_D"
@@ -538,7 +539,7 @@ void root_func(){
 		reg = <0xc1108d20 0x20>;
 		device_id = <4>;
 		pinctrl-names="default";
-//		pinctrl-0=<&d_i2c_master>;
+		pinctrl-0=<&d_i2c_master>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		use_pio = <0>;
@@ -1777,13 +1778,25 @@ void root_func(){
 			amlogic,pins="GPIODV_26","GPIODV_27";
 		};
 
-// MATCH "I2C_D_pin_match" = "&d_i2c_master"
-// L2 PROP_U32 2 = "amlogic,setmask"
-// L2 PROP_STR 2 = "amlogic,pins"
-//		d_i2c_master:d_i2c{
-//			amlogic,setmask=<4 0xc>;
-//			amlogic,pins="GPIOH_7","GPIOH_8";
-//		};
+//$$ MATCH "I2C_C_pin_match" = "&c_i2c_master"
+//$$ L2 PROP_U32 2 = "amlogic,setmask"
+//$$ L2 PROP_STR 2 = "amlogic,pins"
+		c_i2c_master:c_i2c{
+			amlogic,setmask=<5 0x03000000>;
+			amlogic,clrmask=<6 0xc000
+			                 7 0x300000
+			                 8 0x60000
+					 9 0xc00>;
+			amlogic,pins="GPIOH_5","GPIOH_6";
+		};
+
+//$$ MATCH "I2C_D_pin_match" = "&d_i2c_master"
+//$$ L2 PROP_U32 2 = "amlogic,setmask"
+//$$ L2 PROP_STR 2 = "amlogic,pins"
+		d_i2c_master:d_i2c{
+			amlogic,setmask=<4 0xc>;
+			amlogic,pins="GPIOH_7","GPIOH_8";
+		};
 
 //$$ MATCH "remote_pin_0_match" = "&remote_pins"
 //$$ L2 PROP_U32 2 = "amlogic,setmask"
