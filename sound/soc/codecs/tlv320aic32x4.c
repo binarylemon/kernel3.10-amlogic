@@ -42,7 +42,14 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
+#include <linux/pinctrl/consumer.h>
+#include <linux/amlogic/aml_gpio_consumer.h>
+#include <linux/amlogic/aml_audio_codec_probe.h>
 #include "tlv320aic32x4.h"
+
+#define DEV_NAME "tlv320aic32x4"
+
+static struct snd_soc_codec *g_codec = NULL;
 
 struct aic32x4_rate_divs {
 	u32 mclk;
@@ -67,7 +74,24 @@ struct aic32x4_priv {
 	u32 micpga_routing;
 	bool swapdacs;
 	int rstn_gpio;
+
+    /* for more control */
+    int codec_cnt;
+    int codec_mask;
+    struct i2c_client *client1;
+    struct i2c_client *client2;
+    struct i2c_client *client3;
+    struct i2c_client *client4;
 };
+
+enum{
+    MASK_1 = 1 << 0,
+    MASK_2 = 1 << 1,
+    MASK_3 = 1 << 2,
+    MASK_4 = 1 << 3
+};
+
+struct aic32x4_priv *g_aic32x4 = NULL;
 
 /* 0dB min, 1dB steps */
 static DECLARE_TLV_DB_SCALE(tlv_step_1, 0, 100, 0);
@@ -180,6 +204,7 @@ static const struct snd_kcontrol_new right_input_mixer_controls[] = {
 };
 
 static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
+#if 0
 	SND_SOC_DAPM_DAC("Left DAC", "Left Playback", AIC32X4_DACSETUP, 7, 0),
 	SND_SOC_DAPM_MIXER("HPL Output Mixer", SND_SOC_NOPM, 0, 0,
 			   &hpl_output_mixer_controls[0],
@@ -200,6 +225,7 @@ static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
 			   &lor_output_mixer_controls[0],
 			   ARRAY_SIZE(lor_output_mixer_controls)),
 	SND_SOC_DAPM_PGA("LOR Power", AIC32X4_OUTPWRCTL, 2, 0, NULL, 0),
+#endif
 	SND_SOC_DAPM_MIXER("Left Input Mixer", SND_SOC_NOPM, 0, 0,
 			   &left_input_mixer_controls[0],
 			   ARRAY_SIZE(left_input_mixer_controls)),
@@ -209,11 +235,12 @@ static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
 	SND_SOC_DAPM_ADC("Left ADC", "Left Capture", AIC32X4_ADCSETUP, 7, 0),
 	SND_SOC_DAPM_ADC("Right ADC", "Right Capture", AIC32X4_ADCSETUP, 6, 0),
 	SND_SOC_DAPM_MICBIAS("Mic Bias", AIC32X4_MICBIAS, 6, 0),
-
+#if 0
 	SND_SOC_DAPM_OUTPUT("HPL"),
 	SND_SOC_DAPM_OUTPUT("HPR"),
 	SND_SOC_DAPM_OUTPUT("LOL"),
 	SND_SOC_DAPM_OUTPUT("LOR"),
+#endif
 	SND_SOC_DAPM_INPUT("IN1_L"),
 	SND_SOC_DAPM_INPUT("IN1_R"),
 	SND_SOC_DAPM_INPUT("IN2_L"),
@@ -223,6 +250,7 @@ static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
 };
 
 static const struct snd_soc_dapm_route aic32x4_dapm_routes[] = {
+#if 0
 	/* Left Output */
 	{"HPL Output Mixer", "L_DAC Switch", "Left DAC"},
 	{"HPL Output Mixer", "IN1_L Switch", "IN1_L"},
@@ -246,7 +274,7 @@ static const struct snd_soc_dapm_route aic32x4_dapm_routes[] = {
 
 	{"LOR Power", NULL, "LOR Output Mixer"},
 	{"LOR", NULL, "LOR Power"},
-
+#endif
 	/* Left input */
 	{"Left Input Mixer", "IN1_L P Switch", "IN1_L"},
 	{"Left Input Mixer", "IN2_L P Switch", "IN2_L"},
@@ -266,22 +294,129 @@ static inline int aic32x4_change_page(struct snd_soc_codec *codec,
 					unsigned int new_page)
 {
 	struct aic32x4_priv *aic32x4 = snd_soc_codec_get_drvdata(codec);
+    struct i2c_client *client = NULL;
 	u8 data[2];
 	int ret;
+    int ret_s;
+    int test_cnt = 0;
+    int i;
 
 	data[0] = 0x00;
 	data[1] = new_page & 0xff;
 
-	ret = codec->hw_write(codec->control_data, data, 2);
-	if (ret == 2) {
-		aic32x4->page_no = new_page;
-		return 0;
-	} else {
-		return ret;
-	}
+    for (i = 0; i < 4; i ++) {
+        switch(aic32x4->codec_mask & (1 << i)) {
+            case 0x1:
+                client = aic32x4->client1;
+                break;
+            case 0x2:
+                client = aic32x4->client2;
+                break;
+            case 0x4:
+                client = aic32x4->client3;                
+                break;
+            case 0x8:
+                client = aic32x4->client4;
+                break;
+            default:
+                client = NULL;
+                //printk("No client for codec\n");
+                break;
+        }
+        if (NULL == client)
+            continue;
+        test_cnt ++;
+
+        ret = codec->hw_write(client, data, 2);
+        if (ret == 2) {
+            ret_s = 1;
+            aic32x4->page_no = new_page;
+        } else {
+            printk("%x write page failed\n", client->addr);
+        }
+    }
+
+    if (test_cnt != aic32x4->codec_cnt) {
+        printk(KERN_ERR "aic32x4: codec count is not sync with mask!!!\n");
+    }
+
+    if (ret_s)
+        return 0;
+    else
+        return ret;
 }
 
 static int aic32x4_write(struct snd_soc_codec *codec, unsigned int reg,
+				unsigned int val)
+{
+	struct aic32x4_priv *aic32x4 = snd_soc_codec_get_drvdata(codec);
+	unsigned int page = reg / 128;
+	unsigned int fixed_reg = reg % 128;
+    struct i2c_client *client = NULL;
+	u8 data[2];
+	int ret;
+    int ret_s = 0;
+    int test_cnt = 0;
+    int i;
+
+	/* A write to AIC32X4_PSEL is really a non-explicit page change */
+	if (reg == AIC32X4_PSEL)
+		return aic32x4_change_page(codec, val);
+
+	if (aic32x4->page_no != page) {
+		ret = aic32x4_change_page(codec, page);
+		if (ret != 0)
+			return ret;
+	}
+
+	data[0] = fixed_reg & 0xff;
+	data[1] = val & 0xff;
+
+    for (i = 0; i < 4; i ++) {
+        switch(aic32x4->codec_mask & (1 << i)) {
+            case 0x1:
+                client = aic32x4->client1;
+                break;
+            case 0x2:
+                client = aic32x4->client2;
+                break;
+            case 0x4:
+                client = aic32x4->client3;                
+                break;
+            case 0x8:
+                client = aic32x4->client4;
+                break;
+            default:
+                client = NULL;
+                //printk("No client for codec\n");
+                break;
+        }
+        if (NULL == client)
+            continue;
+        test_cnt ++;
+
+        ret = codec->hw_write(client, data, 2);
+        if (2 == ret)
+            ret_s = 1;
+        else
+            printk("%x write error\n", client->addr);
+
+        client = NULL;
+    }
+
+    if (test_cnt != aic32x4->codec_cnt) {
+        printk(KERN_ERR "aic32x4: codec count is not sync with mask!!!\n");
+    }
+
+    if (ret_s)
+        return 0;
+    else
+        return -EIO;
+}
+
+static int aic32x4_client_write(struct snd_soc_codec *codec,
+                struct i2c_client *client,
+                unsigned int reg,
 				unsigned int val)
 {
 	struct aic32x4_priv *aic32x4 = snd_soc_codec_get_drvdata(codec);
@@ -303,7 +438,7 @@ static int aic32x4_write(struct snd_soc_codec *codec, unsigned int reg,
 	data[0] = fixed_reg & 0xff;
 	data[1] = val & 0xff;
 
-	if (codec->hw_write(codec->control_data, data, 2) == 2)
+	if (codec->hw_write(client, data, 2) == 2)
 		return 0;
 	else
 		return -EIO;
@@ -334,7 +469,8 @@ static inline int aic32x4_get_divs(int mclk, int rate)
 			return i;
 		}
 	}
-	printk(KERN_ERR "aic32x4: master clock and sample rate is not supported\n");
+	printk(KERN_ERR "aic32x4: master clock:%d and sample rate:%d is not supported\n",
+			mclk, rate);
 	return -EINVAL;
 }
 
@@ -356,6 +492,7 @@ static int aic32x4_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct aic32x4_priv *aic32x4 = snd_soc_codec_get_drvdata(codec);
 
+	printk("%s aic32x4: set frequency to %d\n", __func__, freq);
 	switch (freq) {
 	case AIC32X4_FREQ_12000000:
 	case AIC32X4_FREQ_24000000:
@@ -363,38 +500,50 @@ static int aic32x4_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		aic32x4->sysclk = freq;
 		return 0;
 	}
-	printk(KERN_ERR "aic32x4: invalid frequency to set DAI system clock\n");
-	return -EINVAL;
+
+	//printk(KERN_ERR "aic32x4: invalid frequency to set DAI system clock, what erver!\n");
+	aic32x4->sysclk = freq;
+	return 0;
+	//return -EINVAL;
 }
 
 static int aic32x4_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
+
+#if 0
+	snd_soc_write(codec, AIC32X4_DOUTCTL, 0x12);
+	return 0;
+#else
 	u8 iface_reg_1;
 	u8 iface_reg_2;
 	u8 iface_reg_3;
-
 	iface_reg_1 = snd_soc_read(codec, AIC32X4_IFACE1);
 	iface_reg_1 = iface_reg_1 & ~(3 << 6 | 3 << 2);
+
 	iface_reg_2 = snd_soc_read(codec, AIC32X4_IFACE2);
 	iface_reg_2 = 0;
 	iface_reg_3 = snd_soc_read(codec, AIC32X4_IFACE3);
 	iface_reg_3 = iface_reg_3 & ~(1 << 3);
+    iface_reg_3 &= 0xc;
 
+	pr_info("%s set fmt:0x%x", __func__, fmt);
 	/* set master/slave audio interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBM_CFM:
 		iface_reg_1 |= AIC32X4_BCLKMASTER | AIC32X4_WCLKMASTER;
 		break;
 	case SND_SOC_DAIFMT_CBS_CFS:
+		pr_info("%s fmt& SND_SOC_DAIFMT_CBS_CFS \n", __func__);
+		iface_reg_1 &= ~(AIC32X4_BCLKMASTER | AIC32X4_WCLKMASTER) ;
 		break;
 	default:
 		printk(KERN_ERR "aic32x4: invalid DAI master/slave interface\n");
 		return -EINVAL;
 	}
-
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
+		pr_info("%s fmt& SND_SOC_DAIFMT_I2S \n", __func__);
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
 		iface_reg_1 |= (AIC32X4_DSP_MODE << AIC32X4_PLLJ_SHIFT);
@@ -421,6 +570,7 @@ static int aic32x4_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	snd_soc_write(codec, AIC32X4_IFACE1, iface_reg_1);
 	snd_soc_write(codec, AIC32X4_IFACE2, iface_reg_2);
 	snd_soc_write(codec, AIC32X4_IFACE3, iface_reg_3);
+#endif
 	return 0;
 }
 
@@ -433,14 +583,18 @@ static int aic32x4_hw_params(struct snd_pcm_substream *substream,
 	u8 data;
 	int i;
 
+	pr_info("%s fmt:0x%x\n", __func__, params_format(params));
 	i = aic32x4_get_divs(aic32x4->sysclk, params_rate(params));
 	if (i < 0) {
 		printk(KERN_ERR "aic32x4: sampling rate not supported\n");
-		return i;
+		//return i;
+		i=0;
 	}
 
+#if 0
+	//master mode 
 	/* Use PLL as CODEC_CLKIN and DAC_MOD_CLK as BDIV_CLKIN */
-	snd_soc_write(codec, AIC32X4_CLKMUX, AIC32X4_PLLCLKIN);
+	snd_soc_write(codec, AIC32X4_CLKMUX, AIC32X4_PLLCLKIN);//ADC3101_BCLKIN
 	snd_soc_write(codec, AIC32X4_IFACE3, AIC32X4_DACMOD2BCLK);
 
 	/* We will fix R value to 1 and will make P & J=K.D as varialble */
@@ -459,11 +613,13 @@ static int aic32x4_hw_params(struct snd_pcm_substream *substream,
 	data = snd_soc_read(codec, AIC32X4_NDAC);
 	data &= ~(0x7f);
 	snd_soc_write(codec, AIC32X4_NDAC, data | aic32x4_divs[i].ndac);
+	pr_info("NDAC: 0x%02x\n", snd_soc_read(codec, AIC32X4_NDAC));
 
 	/* MDAC divider value */
 	data = snd_soc_read(codec, AIC32X4_MDAC);
 	data &= ~(0x7f);
 	snd_soc_write(codec, AIC32X4_MDAC, data | aic32x4_divs[i].mdac);
+	pr_info("MDAC: 0x%02x\n", snd_soc_read(codec, AIC32X4_MDAC));
 
 	/* DOSR MSB & LSB values */
 	snd_soc_write(codec, AIC32X4_DOSRMSB, aic32x4_divs[i].dosr >> 8);
@@ -474,22 +630,87 @@ static int aic32x4_hw_params(struct snd_pcm_substream *substream,
 	data = snd_soc_read(codec, AIC32X4_NADC);
 	data &= ~(0x7f);
 	snd_soc_write(codec, AIC32X4_NADC, data | aic32x4_divs[i].nadc);
+	pr_info("2 NDAC: 0x%02x\n", snd_soc_read(codec, AIC32X4_NDAC));
 
 	/* MADC divider value */
 	data = snd_soc_read(codec, AIC32X4_MADC);
 	data &= ~(0x7f);
 	snd_soc_write(codec, AIC32X4_MADC, data | aic32x4_divs[i].madc);
+	pr_info("2 MDAC: 0x%02x\n", snd_soc_read(codec, AIC32X4_MDAC));
 
 	/* AOSR value */
 	snd_soc_write(codec, AIC32X4_AOSR, aic32x4_divs[i].aosr);
+	pr_info("AOSR: 0x%02x\n", snd_soc_read(codec, AIC32X4_AOSR));
 
 	/* BCLK N divider */
 	data = snd_soc_read(codec, AIC32X4_BCLKN);
 	data &= ~(0x7f);
 	snd_soc_write(codec, AIC32X4_BCLKN, data | aic32x4_divs[i].blck_N);
+	pr_info("BCLKN: 0x%02x\n", snd_soc_read(codec, AIC32X4_BCLKN));
+
+#else
+//	snd_soc_write(codec, AIC32X4_CLKMUX, 0x05);//adc3101 as BCLK
+//	snd_soc_write(codec, AIC32X4_IFACE1,0x41);
+
+    if (aic32x4->client1) {
+        printk("xang client1, i2c address:0x%x\n", aic32x4->client1->addr);
+        //aic32x4_client_write(codec, aic32x4->client1, ADC3101_TDMCTL, 0x03);
+        //aic32x4_client_write(codec, aic32x4->client1, ADC3101_DATASLOTOFFSETCTL, 0x00);
+        //aic32x4_client_write(codec, aic32x4->client1, ADC3101_DATASLOTOFFSETCTL2, 0x00);
+        //aic32x4_client_write(codec, aic32x4->client1, AIC32X4_DOUTCTL,0x12);//primary DOUT output for codec interface
+    }
+    if (aic32x4->client2) {
+        printk("xang client2, i2c address:0x%x\n", aic32x4->client2->addr);
+
+//        aic32x4_client_write(codec, aic32x4->client2, ADC3101_TDMCTL, 0x03);
+//        aic32x4_client_write(codec, aic32x4->client2, ADC3101_DATASLOTOFFSETCTL, 0x20);
+//        aic32x4_client_write(codec, aic32x4->client2, ADC3101_DATASLOTOFFSETCTL2, 0x00);
+//        aic32x4_client_write(codec, aic32x4->client2, AIC32X4_DOUTCTL,0x12);//primary DOUT output for codec interface
+    }
+    if (aic32x4->client3) {
+        printk("xang client3, i2c address:0x%x\n", aic32x4->client3->addr);
+
+//        aic32x4_client_write(codec, aic32x4->client3, ADC3101_TDMCTL, 0x03);
+//        aic32x4_client_write(codec, aic32x4->client3, ADC3101_DATASLOTOFFSETCTL, 0x40);
+//        aic32x4_client_write(codec, aic32x4->client3, ADC3101_DATASLOTOFFSETCTL2, 0x00);
+//        aic32x4_client_write(codec, aic32x4->client3, AIC32X4_DOUTCTL,0x12);//primary DOUT output for codec interface
+    }
+    if (aic32x4->client4) {
+        printk("xang client4, i2c address:0x%x\n", aic32x4->client4->addr);
+
+//        aic32x4_client_write(codec, aic32x4->client4, ADC3101_TDMCTL, 0x03);
+//        aic32x4_client_write(codec, aic32x4->client4, ADC3101_DATASLOTOFFSETCTL, 0x60);
+//        aic32x4_client_write(codec, aic32x4->client4, ADC3101_DATASLOTOFFSETCTL2, 0x00);
+//        aic32x4_client_write(codec, aic32x4->client4, AIC32X4_DOUTCTL,0x12);//primary DOUT output for codec interface
+    }
+
+	snd_soc_write(codec,AIC32X4_ADCSPB,0x01);                                                                                                                         
+
+	snd_soc_write(codec, AIC32X4_NADC,0x82);
+	snd_soc_write(codec, AIC32X4_MADC,0x81);
+	snd_soc_write(codec, AIC32X4_AOSR,0xB0);
+
+    snd_soc_write(codec, AIC32X4_CLKMUX, 0x05);
+
+//	snd_soc_write(codec, AIC32X4_LADCVOL,0x4);
+//	snd_soc_write(codec, AIC32X4_RADCVOL,0x4);
+	snd_soc_write(codec, AIC32X4_MICBIAS,0x28);
+	snd_soc_write(codec, AIC32X4_LMICPGAPIN,0xfc);
+	snd_soc_write(codec, AIC32X4_RMICPGAPIN,0xfc);
+	snd_soc_write(codec, AIC32X4_LMICPGAVOL,0x10);
+	snd_soc_write(codec, AIC32X4_RMICPGAVOL,0x10);
+	snd_soc_write(codec, AIC32X4_ADCSETUP, 0xc2);
+	snd_soc_write(codec, AIC32X4_ADCFGA, 0);
+
+{
+    int i;
+    for (i = 0; i < 300*1000000; i++);    
+}
+#endif
 
 	data = snd_soc_read(codec, AIC32X4_IFACE1);
 	data = data & ~(3 << 4);
+
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		break;
@@ -597,16 +818,18 @@ static const struct snd_soc_dai_ops aic32x4_ops = {
 
 static struct snd_soc_dai_driver aic32x4_dai = {
 	.name = "tlv320aic32x4-hifi",
+	
 	.playback = {
 		     .stream_name = "Playback",
 		     .channels_min = 1,
-		     .channels_max = 2,
+		     .channels_max = 8,
 		     .rates = AIC32X4_RATES,
 		     .formats = AIC32X4_FORMATS,},
+
 	.capture = {
 		    .stream_name = "Capture",
 		    .channels_min = 1,
-		    .channels_max = 2,
+		    .channels_max = 8,
 		    .rates = AIC32X4_RATES,
 		    .formats = AIC32X4_FORMATS,},
 	.ops = &aic32x4_ops,
@@ -629,11 +852,13 @@ static int aic32x4_probe(struct snd_soc_codec *codec)
 {
 	struct aic32x4_priv *aic32x4 = snd_soc_codec_get_drvdata(codec);
 	u32 tmp_reg;
-	int ret;
+	//int ret;
 
 	codec->hw_write = (hw_write_t) i2c_master_send;
 	codec->control_data = aic32x4->control_data;
 
+	g_codec = codec;
+	/*
 	if (aic32x4->rstn_gpio >= 0) {
 		ret = devm_gpio_request_one(codec->dev, aic32x4->rstn_gpio,
 				GPIOF_OUT_INIT_LOW, "tlv320aic32x4 rstn");
@@ -641,10 +866,53 @@ static int aic32x4_probe(struct snd_soc_codec *codec)
 			return ret;
 		ndelay(10);
 		gpio_set_value(aic32x4->rstn_gpio, 1);
+	}*/
+	if (aic32x4->rstn_gpio > 0) {
+		amlogic_set_value(aic32x4->rstn_gpio, 1, DEV_NAME);
+
 	}
 
 	snd_soc_write(codec, AIC32X4_RESET, 0x01);
+#if 1
+	//dgt add
+	mdelay(100);
 
+#if 0
+
+	snd_soc_write(codec, AIC32X4_NADC,0x82);
+	snd_soc_write(codec, AIC32X4_NADC,0x81);
+	snd_soc_write(codec, AIC32X4_IFACE1,0x41);//reg27:DSP. 16bit,  3-stating of DOUT: enabled,
+	snd_soc_write(codec, AIC32X4_CLKMUX,0x05);
+	snd_soc_write(codec, AIC32X4_AOSR,0xB0);
+	snd_soc_write(codec, AIC32X4_ADCSETUP, 0xc2);
+	snd_soc_write(codec, AIC32X4_ADCFGA, 0);
+#else
+	//I2S slave
+	snd_soc_write(codec, AIC32X4_ADCSPB,0x01);
+	snd_soc_write(codec, AIC32X4_IFACE1,0x41);
+	snd_soc_write(codec, AIC32X4_DOUTCTL,0x12);//primary DOUT output for codec interface
+	snd_soc_write(codec, AIC32X4_CLKMUX,0x05);
+	snd_soc_write(codec, AIC32X4_NADC,0x82);
+	snd_soc_write(codec, AIC32X4_NADC,0x81);
+	snd_soc_write(codec, AIC32X4_AOSR,0xb0);
+	snd_soc_write(codec, AIC32X4_LADCVOL,0);
+	snd_soc_write(codec, AIC32X4_RADCVOL,0);
+
+	snd_soc_write(codec, AIC32X4_MICBIAS,0);
+	snd_soc_write(codec, AIC32X4_LMICPGAPIN,0);
+	snd_soc_write(codec, AIC32X4_LMICPGAPIN,0xfc);
+	snd_soc_write(codec, AIC32X4_RMICPGAPIN,0xfc);
+	snd_soc_write(codec, AIC32X4_LMICPGAVOL,0);
+	snd_soc_write(codec, AIC32X4_RMICPGAVOL,0);
+	snd_soc_write(codec, AIC32X4_ADCSETUP, 0xc2);
+	snd_soc_write(codec, AIC32X4_ADCFGA, 0);
+
+    snd_soc_write(codec, AIC32X4_MICBIAS, AIC32X4_MICBIAS_LDOIN |
+                          AIC32X4_MICBIAS_2075V);
+
+#endif
+	//end 
+#else
 	/* Power platform configuration */
 	if (aic32x4->power_cfg & AIC32X4_PWR_MICBIAS_2075_LDOIN) {
 		snd_soc_write(codec, AIC32X4_MICBIAS, AIC32X4_MICBIAS_LDOIN |
@@ -681,6 +949,7 @@ static int aic32x4_probe(struct snd_soc_codec *codec)
 	if (aic32x4->micpga_routing & AIC32X4_MICPGA_ROUTE_RMIC_IN1L_10K) {
 		snd_soc_write(codec, AIC32X4_RMICPGANIN, AIC32X4_RMICPGANIN_IN1L_10K);
 	}
+#endif
 
 	aic32x4_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	snd_soc_add_codec_controls(codec, aic32x4_snd_controls,
@@ -716,33 +985,267 @@ static struct snd_soc_codec_driver soc_codec_dev_aic32x4 = {
 	.set_bias_level = aic32x4_set_bias_level,
 };
 
+static int hex2dec(u8 ch)
+{
+    if(ch >= '0' && ch <= '9')
+        return ch - '0';
+    else if(ch >= 'a' && ch <= 'f')
+        return ch - 'a' + 10;
+    else if(ch >= 'A' && ch <= 'F')
+        return ch - 'A' + 10;
+
+    return -1;
+}
+
+
+static ssize_t reg_show(struct class *cla, struct class_attribute *attr, char *buf)
+{
+	int val,i;
+	struct aic32x4_priv *aic32x4;
+    struct i2c_client *client = NULL;
+	u8 data[2];
+    int reg;
+	int ret;
+
+	if (g_codec == NULL) {
+		pr_err("codec is not ready\n");
+		return 1;
+	}
+    aic32x4 = snd_soc_codec_get_drvdata(g_codec);
+    if (NULL == aic32x4) {
+		pr_err("codec error data\n");
+		return 1;
+    }
+
+
+    for (i = 0; i < 4; i ++) {
+        switch(aic32x4->codec_mask & (1 << i)) {
+            case 0x1:
+                client = aic32x4->client1;
+                break;
+            case 0x2:
+                client = aic32x4->client2;
+                break;
+            case 0x4:
+                client = aic32x4->client3;                
+                break;
+            case 0x8:
+                client = aic32x4->client4;
+                break;
+            default:
+                client = NULL;
+                //printk("No client for codec\n");
+                break;
+        }
+        if (NULL == client)
+            continue;
+
+        printk("client i2c addr:%x\n", client->addr);
+
+
+    	printk("all regs:\n");
+    	for(reg = 1; reg < 128 + 100; reg ++) {
+            unsigned int page = reg / 128;
+            unsigned int fixed_reg = reg % 128;
+
+
+            /* ensure each client write correct page */
+            data[0] = 0x00;
+            data[1] = page & 0xff;
+
+            ret = g_codec->hw_write(client, data, 2);
+            if (ret == 2) {
+                aic32x4->page_no = page;
+            } else {
+                printk("error page\n");
+                return ret;
+            }
+
+            val = i2c_smbus_read_byte_data(client, fixed_reg & 0xff);
+    		printk("page[%d] reg[%d]: 0x%02x \n", page, fixed_reg, val);
+    	}
+
+    }
+
+	printk("\n");
+	return strlen(buf);
+}
+
+static ssize_t reg_store(struct class *cla, struct class_attribute *attr, const char *buf, size_t count)
+{
+    int ret = 0;
+    u8 addr, reg, value = 0;
+	struct aic32x4_priv *aic32x4;
+    struct i2c_client *client = NULL;
+    int i, test_exist = 0;
+
+	if (g_codec == NULL) {
+		pr_err("codec is not ready\n");
+		return 1;
+	}
+    aic32x4 = snd_soc_codec_get_drvdata(g_codec);
+    if (NULL == aic32x4) {
+		pr_err("codec error data\n");
+		return 1;
+    }
+
+    if (count != 4) {
+        printk("echo -n xx030f > ak4376_control, xx is i2c address, 0x18~0x1b\n");
+        return -1;
+    }
+
+    ret = hex2dec(buf[0]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    addr = ret << 4;
+
+    ret = hex2dec(buf[1]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    addr |= (ret & 0xf);
+
+    ret = hex2dec(buf[2]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    reg = ret << 4;
+
+    ret = hex2dec(buf[3]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    reg |= (ret & 0xf);
+
+    ret = hex2dec(buf[4]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    value = ret << 4;
+
+    ret = hex2dec(buf[5]);
+    if (ret == -1) {
+        printk("store error.\n");
+        return -1;
+    }
+    value |= (ret & 0xf);
+
+    printk("xang reg:%d, data:%d\n", reg, value);
+
+    for (i = 0; i < 4; i ++) {
+        switch(aic32x4->codec_mask & (1 << i)) {
+            case 0x1:
+                client = aic32x4->client1;
+                break;
+            case 0x2:
+                client = aic32x4->client2;
+                break;
+            case 0x4:
+                client = aic32x4->client3;                
+                break;
+            case 0x8:
+                client = aic32x4->client4;
+                break;
+            default:
+                client = NULL;
+                //printk("No client for codec\n");
+                break;
+        }
+        if (NULL == client)
+            continue;
+        if (addr != client->addr)
+            continue;
+        test_exist = 1;
+        printk("client i2c addr:%x, reg:%d, value:%d\n",
+            client->addr,
+            reg,
+            value);
+        aic32x4_client_write(g_codec, client, reg, value);
+    }
+
+    if (!test_exist)
+        printk("NOT support such i2c address:%x\n", addr);
+
+	return count;
+}
+static struct class_attribute t_class_attrs[] = {
+    __ATTR(reg,S_IRUGO|S_IWUGO,reg_show,reg_store),
+    __ATTR_NULL
+};
+static struct class t_class = {
+    .name = DEV_NAME,
+    .class_attrs = t_class_attrs,
+    .owner = THIS_MODULE,
+};
+
 static int aic32x4_i2c_probe(struct i2c_client *i2c,
 			     const struct i2c_device_id *id)
 {
 	struct aic32x4_pdata *pdata = i2c->dev.platform_data;
-	struct aic32x4_priv *aic32x4;
 	int ret;
 
-	aic32x4 = devm_kzalloc(&i2c->dev, sizeof(struct aic32x4_priv),
-			       GFP_KERNEL);
-	if (aic32x4 == NULL)
-		return -ENOMEM;
+    if (NULL == g_aic32x4) {
+    	g_aic32x4 = devm_kzalloc(&i2c->dev, sizeof(struct aic32x4_priv),
+    			       GFP_KERNEL);
+    	if (g_aic32x4 == NULL)
+    		return -ENOMEM;
+    }
 
-	aic32x4->control_data = i2c;
-	i2c_set_clientdata(i2c, aic32x4);
+    if (0x18 == i2c->addr) {
+        g_aic32x4->client1 = i2c;
+        g_aic32x4->codec_mask |= (1 << 0);
+    } else if (0x19 == i2c->addr) {
+        g_aic32x4->client2 = i2c;
+        g_aic32x4->codec_mask |= (1 << 1);
+    } else if (0x1a == i2c->addr) {
+        g_aic32x4->client3 = i2c;
+        g_aic32x4->codec_mask |= (1 << 2);
+    } else if (0x1b == i2c->addr) {
+        g_aic32x4->client4 = i2c;
+        g_aic32x4->codec_mask |= (1 << 3);
+    }
+    g_aic32x4->codec_cnt ++;
+
+    /* control data is the last one*/
+	g_aic32x4->control_data = i2c;
+	i2c_set_clientdata(i2c, g_aic32x4);
+
+    if (g_aic32x4->codec_cnt > 1)
+        goto reg_codec;
 
 	if (pdata) {
-		aic32x4->power_cfg = pdata->power_cfg;
-		aic32x4->swapdacs = pdata->swapdacs;
-		aic32x4->micpga_routing = pdata->micpga_routing;
-		aic32x4->rstn_gpio = pdata->rstn_gpio;
+		g_aic32x4->power_cfg = pdata->power_cfg;
+		g_aic32x4->swapdacs = pdata->swapdacs;
+		g_aic32x4->micpga_routing = pdata->micpga_routing;
+		g_aic32x4->rstn_gpio = pdata->rstn_gpio;
 	} else {
-		aic32x4->power_cfg = 0;
-		aic32x4->swapdacs = false;
-		aic32x4->micpga_routing = 0;
-		aic32x4->rstn_gpio = -1;
+		g_aic32x4->power_cfg = 0;
+		g_aic32x4->swapdacs = false;
+		g_aic32x4->micpga_routing = AIC32X4_MICPGA_ROUTE_LMIC_IN2R_10K;//0;
+		g_aic32x4->rstn_gpio = amlogic_gpio_name_map_num("GPIOAO_6");
+		amlogic_set_value(g_aic32x4->rstn_gpio, 0, DEV_NAME);
 	}
 
+	pr_info("%s done\n", __func__);
+
+    ret = class_register(&t_class);
+    if (ret < 0) {
+        printk(KERN_ERR "%s:%s  failed to register class\n", DEV_NAME,__FUNCTION__);
+    }
+
+reg_codec:
+    pr_info("xang i2c addr = 0x%02x, codec_cnt:%d, codec_mask:0x%x\n",
+        i2c->addr,
+        g_aic32x4->codec_cnt,
+        g_aic32x4->codec_mask);
+    
+    dev_set_name(&i2c->dev, "%s", "tlv320aic32x4-codec");
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_aic32x4, &aic32x4_dai, 1);
 	return ret;
@@ -758,12 +1261,19 @@ static const struct i2c_device_id aic32x4_i2c_id[] = {
 	{ "tlv320aic32x4", 0 },
 	{ }
 };
+
+static struct of_device_id aic32x4_match_table[] = {
+    { .compatible = "ti,tlv320aic32x4", },
+    { },
+};
+
 MODULE_DEVICE_TABLE(i2c, aic32x4_i2c_id);
 
 static struct i2c_driver aic32x4_i2c_driver = {
 	.driver = {
 		.name = "tlv320aic32x4",
 		.owner = THIS_MODULE,
+		.of_match_table = aic32x4_match_table,
 	},
 	.probe =    aic32x4_i2c_probe,
 	.remove =   aic32x4_i2c_remove,

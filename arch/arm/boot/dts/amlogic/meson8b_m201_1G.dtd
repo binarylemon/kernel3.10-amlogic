@@ -376,7 +376,7 @@ void root_func(){
     bt-dev{
         compatible = "amlogic,bt-dev";
         dev_name = "bt-dev";
-        status = "ok";
+        status = "notok";
         gpio_reset = "GPIOX_20";
     };
 /// ***************************************************************************************
@@ -392,7 +392,7 @@ void root_func(){
     wifi{
 		compatible = "amlogic,aml_broadcm_wifi";
 		dev_name = "aml_broadcm_wifi";
-		status = "okay";
+		status = "notokay";
 		interrupt_pin = "GPIOX_21";
 		irq_num = <4>;
 		irq_trigger_type = "GPIO_IRQ_HIGH";
@@ -407,7 +407,7 @@ void root_func(){
 	wifi_power{
             compatible = "amlogic,wifi_power";
             dev_name = "wifi_power";
-            status = "okay";
+            status = "notokay";
             power_gpio = "GPIOAO_6";
             power_gpio2 = "GPIOX_11";
 	}; 
@@ -975,6 +975,42 @@ void root_func(){
 
     aml_audio_codec{
         compatible = "amlogic,audio_codec";
+        tlv320aic32x4@18{
+            codec_name = "tlv320aic32x4";
+            i2c_addr = <0x18>;
+            i2c_bus = "i2c_bus_b";
+            id_reg = <0x03>;
+            id_val = <0x00>;
+            capless = <0>;
+            status = "okay";
+        };
+        tlv320aic32x4@19{
+            codec_name = "tlv320aic32x4";
+            i2c_addr = <0x19>;
+            i2c_bus = "i2c_bus_b";
+            id_reg = <0x03>;
+            id_val = <0x00>;
+            capless = <0>;
+            status = "okay";
+        };
+        tlv320aic32x4@1a{
+            codec_name = "tlv320aic32x4";
+            i2c_addr = <0x1a>;
+            i2c_bus = "i2c_bus_b";
+            id_reg = <0x03>;
+            id_val = <0x00>;
+            capless = <0>;
+            status = "okay";
+        };
+        tlv320aic32x4@1b{
+            codec_name = "tlv320aic32x4";
+            i2c_addr = <0x1b>;
+            i2c_bus = "i2c_bus_b";
+            id_reg = <0x03>;
+            id_val = <0x00>;
+            capless = <0>;
+            status = "okay";
+        };
         rt5616:rt5616{
             codec_name = "rt5616";
             i2c_addr = <0x1B>;
@@ -1019,7 +1055,7 @@ void root_func(){
     aml_m8_sound_card{
         compatible = "sound_card, aml_snd_m8";
         aml,sound_card = "AML-M8AUDIO";
-        aml,codec_dai = "AML-M8","rt5616-aif1","rt5631-hifi","wm8960-hifi","dummy_codec";
+        aml,codec_dai = "AML-M8","tlv320aic32x4-hifi","dummy_codec";
         //aml,codec_name = "aml_m8_codec.0","rt5616.4-001b";
         //aml,audio-codec = <&rt5616>;
         aml,audio-routing-rt5616 = 
@@ -1039,6 +1075,8 @@ void root_func(){
         aml,audio-routing-dummy=
             "Ext Spk","LOUTL",
             "Ext Spk","LOUTR";
+		aml,audio-routing-tlv320aic32x4=
+            "LINPUT1","Mic Bias";
         mute_gpio = "GPIO_BSD_EN";
         hp_disable;
         //mute_inv;
@@ -1938,9 +1976,14 @@ void root_func(){
 //$$ L2 PROP_U32 10 = "amlogic,clrmask"
 //$$ L2 PROP_STR 6 = "amlogic,pins"
         audio_pins:audio_pin{
-            amlogic,setmask=<10 0x78000008>;
-            amlogic,clrmask=<10 0x80002000>;
-            amlogic,pins = "GPIOAO_8","GPIOAO_9","GPIOAO_10","GPIOAO_11","GPIOAO_13";
+            amlogic,setmask=< 3  0x78000000
+							  10 0x78000008>;
+            amlogic,clrmask=< 3  0x00803280
+							  4  0x3e000
+			                  //5  0x10008000
+							  5  0x300
+			                  10 0x80002000>;
+            amlogic,pins = "GPIOX_4","GPIOX_5","GPIOX_6","GPIOX_7","GPIOAO_8","GPIOAO_9","GPIOAO_10","GPIOAO_11","GPIOAO_13";
         };
 
 //$$ MATCH "Spi_pin_0_match" = "&aml_spi_nor_pins"

@@ -88,16 +88,16 @@ static void aml_audio_stop_timer(struct aml_audio_private_data *p_aml_audio)
 
 static int hp_det_adc_value(struct aml_audio_private_data *p_aml_audio)
 {
-    int ret,hp_value,hp_val_sum,loop_num;
+    int ret,hp_value;
+    int hp_val_sum = 0;
+    int loop_num = 0;
     unsigned int mic_ret = 0;
-    hp_val_sum = 0;
-    loop_num = 0;
     
     while(loop_num < 8){
         hp_value = get_adc_sample(p_aml_audio->hp_adc_ch);
         if(hp_value <0){
             printk("hp detect get error adc value!\n");
-            continue;
+            return -1; //continue;
         }
         hp_val_sum += hp_value;
         loop_num ++;
@@ -139,7 +139,6 @@ static int aml_audio_hp_detect(struct aml_audio_private_data *p_aml_audio)
     while(loop_num < 3){
         ret = hp_det_adc_value(p_aml_audio);
         if(p_aml_audio->hp_last_state != ret){
-            loop_num = 0;
             msleep_interruptible(50);
             if(ret < 0){
                 ret = p_aml_audio->hp_last_state;
@@ -148,8 +147,8 @@ static int aml_audio_hp_detect(struct aml_audio_private_data *p_aml_audio)
             }
         }else{
             msleep_interruptible(50);
-            loop_num = loop_num + 1;
         }
+        loop_num = loop_num + 1;
     }
  
    // mutex_unlock(&p_aml_audio->lock);
@@ -225,7 +224,7 @@ static void aml_asoc_timer_func(unsigned long data)
     struct aml_audio_private_data *p_aml_audio = (struct aml_audio_private_data *)data;
     unsigned long delay = msecs_to_jiffies(150);
 
-    if(p_aml_audio->hp_det_status){
+    if(p_aml_audio->hp_det_status/* && !p_aml_audio->suspended*/){
         schedule_work(&p_aml_audio->work);
     }
     mod_timer(&p_aml_audio->timer, jiffies + delay);
@@ -243,20 +242,43 @@ static int aml_asoc_hw_params(struct snd_pcm_substream *substream,
     printk(KERN_DEBUG "enter %s stream: %s rate: %d format: %d\n", __func__, (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ? "playback" : "capture", params_rate(params), params_format(params));
 
     /* set codec DAI configuration */
-    ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
-        SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
-    if (ret < 0) {
-        printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
-        return ret;
+    if (strstr(codec_info.name_bus,"tlv320aic32x4")) {
+        ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
+            SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+        if (ret < 0) {
+            printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
+            return ret;
+        }
     }
+    else if (strstr(codec_info.name_bus,"tlv320aic3x")) {
+        ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
+            SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+        if (ret < 0) {
+            printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
+            return ret;
+        }
+    } else {
+	    ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+	        SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	    if (ret < 0) {
+	        printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
+	        return ret;
+	    }
+	}
 
     /* set cpu DAI configuration */
     if((!strncmp(codec_info.name_bus,"rt5616",strlen("rt5616"))) || 
-        !(strncmp(codec_info.name_bus,"aml_pmu3_codec",strlen("aml_pmu3_codec")))){
-        
+        !(strncmp(codec_info.name_bus,"aml_pmu3_codec",strlen("aml_pmu3_codec")))
+		){
+        pr_info("set cpu_dai SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM\n");
         ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
             SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM);
-    }else{
+    } else if (strstr(codec_info.name_bus,"tlv320aic32x4")) {
+        printk("set cpu_dai SND_SOC_DAIFMT_DSP_A | SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM\n");
+        ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_DSP_A |
+            SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM);
+    }
+    else{
         ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
             SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBM_CFM);
     }
@@ -269,18 +291,32 @@ static int aml_asoc_hw_params(struct snd_pcm_substream *substream,
     }
 #if 1
     /* set codec DAI clock */
-    ret = snd_soc_dai_set_sysclk(codec_dai, 0, params_rate(params) * 256, SND_SOC_CLOCK_IN);
-    if (ret < 0) {
-        printk(KERN_ERR "%s: set codec dai sysclk failed (rate: %d)!\n", __func__, params_rate(params));
-        return ret;
-    }
+	/*
+	if (strstr(codec_info.name_bus,"tlv320aic")) {
+		ret = snd_soc_dai_set_sysclk(codec_dai, 0, 12000000, SND_SOC_CLOCK_IN);
+		if (ret < 0) {
+			printk(KERN_ERR "%s: set codec dai sysclk failed (rate: %d)!\n", __func__, params_rate(params));
+			return ret;
+		}
+	}else  */
+	{
+		ret = snd_soc_dai_set_sysclk(codec_dai, 0, params_rate(params) * 256, SND_SOC_CLOCK_IN);
+		if (ret < 0) {
+			printk(KERN_ERR "%s: set codec dai sysclk failed (rate: %d)!\n", __func__, params_rate(params));
+			return ret;
+		}
+	}
 cpu_dai:
     /* set cpu DAI clock */
-    ret = snd_soc_dai_set_sysclk(cpu_dai, 0, params_rate(params) * 256, SND_SOC_CLOCK_OUT);
-    if (ret < 0) {
-        printk(KERN_ERR "%s: set cpu dai sysclk failed (rate: %d)!\n", __func__, params_rate(params));
-        return ret;
-    }
+	//if (strstr(codec_info.name_bus,"tlv320aic")) {
+	//}else 
+	{
+		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, params_rate(params) * 256, SND_SOC_CLOCK_OUT);
+		if (ret < 0) {
+			printk(KERN_ERR "%s: set cpu dai sysclk failed (rate: %d)!\n", __func__, params_rate(params));
+			return ret;
+		}
+	}
 #endif
     return 0;
 }
@@ -296,7 +332,6 @@ static int aml_m8_spk_enabled;
 static bool aml_audio_i2s_mute_flag = 0;
 static bool aml_audio_spdif_mute_flag = 0;
 
-#if 0
 static int aml_m8_set_spk(struct snd_kcontrol *kcontrol,
     struct snd_ctl_elem_value *ucontrol)
 {
@@ -312,7 +347,6 @@ static int aml_m8_set_spk(struct snd_kcontrol *kcontrol,
     return 0;
 }
 
-#endif
 static int aml_m8_get_spk(struct snd_kcontrol *kcontrol,
     struct snd_ctl_elem_value *ucontrol)
 {
@@ -412,9 +446,20 @@ static int aml_set_bias_level(struct snd_soc_card *card,
 #ifdef CONFIG_PM_SLEEP
 static int aml_suspend_pre(struct snd_soc_card *card)
 {
-    printk(KERN_DEBUG "enter %s\n", __func__);
-#if HP_DET
+    struct aml_audio_private_data * p_aml_audio;
 
+    printk(KERN_INFO "enter %s\n", __func__);
+#if 0
+    p_aml_audio = snd_soc_card_get_drvdata(card);
+    if(!p_aml_audio->hp_disable){
+        /* stop timer */
+        mutex_lock(&p_aml_audio->lock);
+        p_aml_audio->suspended = true;
+        if (p_aml_audio->timer_en) {
+            aml_audio_stop_timer(p_aml_audio);
+        }
+        mutex_unlock(&p_aml_audio->lock);
+    }
 #endif
     return 0;
 }
@@ -501,7 +546,21 @@ static int aml_resume_pre(struct snd_soc_card *card)
 
 static int aml_resume_post(struct snd_soc_card *card)
 {
-    printk(KERN_DEBUG "enter %s\n", __func__);
+    struct aml_audio_private_data * p_aml_audio;
+
+    printk(KERN_INFO "enter %s\n", __func__);
+#if 0
+    p_aml_audio = snd_soc_card_get_drvdata(card);
+    if(!p_aml_audio->hp_disable){
+        mutex_lock(&p_aml_audio->lock);
+        p_aml_audio->suspended = false;
+        if (!p_aml_audio->timer_en) {
+            aml_audio_start_timer(p_aml_audio, msecs_to_jiffies(100));
+        }
+        mutex_unlock(&p_aml_audio->lock);
+    }
+#endif
+
     return 0;
 }
 #else
@@ -550,6 +609,69 @@ static struct snd_soc_jack_pin jack_pins[] = {
     }
 };
 
+/* HDMI in audio format detect: LPCM or NONE-LPCM */           
+static const char *hdmi_audio_type_texts[] = {
+    "LPCM","NONE-LPCM","UN-KNOWN"
+};          
+static const struct soc_enum hdmi_audio_type_enum =
+    SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+            ARRAY_SIZE(hdmi_audio_type_texts),
+            hdmi_audio_type_texts);
+
+static int aml_hdmi_audio_type_get_enum(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+    int ch_status = 0;
+    if ((READ_MPEG_REG(AUDIN_DECODE_CONTROL_STATUS)>>24)&0x1){
+        ch_status = READ_MPEG_REG(AUDIN_DECODE_CHANNEL_STATUS_A_0);
+        if (ch_status&2) //NONE-LPCM
+            ucontrol->value.enumerated.item[0] = 1;
+        else //LPCM
+            ucontrol->value.enumerated.item[0] = 0;     
+    }
+    else
+        ucontrol->value.enumerated.item[0] = 2; //un-stable. un-known       
+    
+    return 0;
+}
+
+static int aml_hdmi_audio_type_set_enum(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+    return 0;
+}
+
+/* spdif in audio format detect: LPCM or NONE-LPCM */
+static const char *spdif_audio_type_texts[] = {
+    "LPCM","NONE-LPCM","UN-KNOWN"
+};          
+static const struct soc_enum spdif_audio_type_enum =
+    SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+            ARRAY_SIZE(spdif_audio_type_texts),
+            spdif_audio_type_texts);
+
+static int aml_spdif_audio_type_get_enum(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+	int ch_status = 0;
+    //if ((READ_MPEG_REG(AUDIN_SPDIF_MISC)>>0x7)&0x1){
+        ch_status = READ_MPEG_REG(AUDIN_SPDIF_CHNL_STS_A)&0x3;
+        if (ch_status&2) //NONE-LPCM
+            ucontrol->value.enumerated.item[0] = 1;
+        else //LPCM
+            ucontrol->value.enumerated.item[0] = 0;     
+    //}
+    //else
+    //    ucontrol->value.enumerated.item[0] = 2; //un-stable. un-known       
+    return 0;
+}
+
+static int aml_spdif_audio_type_set_enum(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+    return 0;
+}
+
 static const struct snd_kcontrol_new aml_m8_controls[] = {
 	//SOC_DAPM_PIN_SWITCH("Ext Spk"),
 
@@ -563,7 +685,16 @@ static const struct snd_kcontrol_new aml_m8_controls[] = {
 
 	SOC_SINGLE_BOOL_EXT("Ext Spk Switch", 0,
 		aml_m8_get_spk,
-		NULL),
+		aml_m8_set_spk),
+
+	SOC_ENUM_EXT("HDMI Audio Type", hdmi_audio_type_enum,
+        aml_hdmi_audio_type_get_enum,
+        aml_hdmi_audio_type_set_enum),
+
+	SOC_ENUM_EXT("SPDIFIN Audio Type", spdif_audio_type_enum,
+        aml_spdif_audio_type_get_enum,
+        aml_spdif_audio_type_set_enum),
+    
    /*
     SOC_SINGLE_BOOL_EXT("Audio MPLL9 Switch", 0,
     aml_m8_get_MPLL9,
@@ -580,6 +711,7 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
     int ret = 0;
     int hp_paraments[5];
 	
+    printk("enter %s\n", __func__);
     printk(KERN_DEBUG "enter %s \n", __func__);
 	p_aml_audio = snd_soc_card_get_drvdata(card);
     ret = snd_soc_add_card_controls(codec->card, aml_m8_controls,
@@ -642,6 +774,7 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
         p_aml_audio->timer.function = aml_asoc_timer_func;
         p_aml_audio->timer.data = (unsigned long)p_aml_audio;
         p_aml_audio->data= (void*)card;
+        /*p_aml_audio->suspended = false;*/
 
         INIT_WORK(&p_aml_audio->work, aml_asoc_work_func);
         mutex_init(&p_aml_audio->lock);
@@ -670,21 +803,40 @@ static struct snd_soc_dai_link aml_codec_dai_link[] = {
         .cpu_dai_name = "aml-i2s-dai.0",
         .init = aml_asoc_init,
         .platform_name = "aml-i2s.0",
-        //.codec_name = "aml_m8_codec.0",
+        .codec_name = "dummy_codec.0",
         .ops = &aml_asoc_ops,
     },
-#ifdef CONFIG_SND_SOC_PCM2BT
+#if 1
+    {
+        .name = "SND_M8 TI",
+        .stream_name = "AML PCM TI",
+        .cpu_dai_name = "aml-i2s-dai.0",
+        .codec_dai_name = "tlv320aic32x4-hifi",
+        .platform_name = "aml-i2s.0",
+        .codec_name = "tlv320aic32x4-codec",
+        .ops = &aml_asoc_ops,
+    },
+//#ifdef CONFIG_SND_SOC_PCM2BT
+#else
     {
         .name = "BT Voice",
         .stream_name = "Voice PCM",
         .cpu_dai_name = "aml-pcm-dai.0",
-        .codec_dai_name = "pcm2bt-pcm",
+        .codec_dai_name = "tlv320aic32x4-hifi",//"pcm2bt-pcm",
         .platform_name = "aml-pcm.0",
-        .codec_name = "pcm2bt.0",
-        //.ops = &voice_soc_ops,
+        .codec_name = "tlv320aic32x4-codec",//"pcm2bt.0",
+        .ops = &aml_asoc_ops,
     },
+//    {
+//        .name = "BT Voice",
+//        .stream_name = "Voice PCM",
+//        .cpu_dai_name = "aml-pcm-dai.0",
+//        .codec_dai_name = "tlv320aic3x-hifi",//"pcm2bt-pcm",
+//        .platform_name = "aml-pcm.0",
+//        .codec_name = "tlv320aic3x-codec",//"pcm2bt.0",
+//        .ops = &aml_asoc_ops,
+//    },
 #endif
-
     {
         .name = "AML-SPDIF",
         .stream_name = "SPDIF PCM",
@@ -720,7 +872,7 @@ static void aml_m8_pinmux_init(struct snd_soc_card *card)
     p_aml_audio->pin_ctl = devm_pinctrl_get_select(card->dev, "aml_snd_m8");
     
     p_audio = p_aml_audio;
-    printk("-----ext_codec=%d---\n",ext_codec);
+    printk("--%s --ext_codec=%d---\n",__func__, ext_codec);
 //#if USE_EXTERNAL_DAC
     if(ext_codec){
 #ifndef CONFIG_MESON_TRUSTZONE

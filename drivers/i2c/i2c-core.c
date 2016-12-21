@@ -235,6 +235,8 @@ static int i2c_device_probe(struct device *dev)
 	struct i2c_client	*client = i2c_verify_client(dev);
 	struct i2c_driver	*driver;
 	int status;
+	
+	printk("%s:%d\n", __func__, __LINE__);
 
 	if (!client)
 		return 0;
@@ -247,8 +249,10 @@ static int i2c_device_probe(struct device *dev)
 		device_init_wakeup(&client->dev,
 					client->flags & I2C_CLIENT_WAKE);
 	dev_dbg(dev, "probe\n");
+	printk("%s:%d\n", __func__, __LINE__);
 
 	status = driver->probe(client, i2c_match_id(driver->id_table, client));
+	printk("%s:%d %d\n", __func__, __LINE__, status);
 	if (status) {
 		client->driver = NULL;
 		i2c_set_clientdata(client, NULL);
@@ -630,6 +634,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 {
 	struct i2c_client	*client;
 	int			status;
+    printk("enter %s\n", __func__);
 
 	client = kzalloc(sizeof *client, GFP_KERNEL);
 	if (!client)
@@ -647,6 +652,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 	client->irq = info->irq;
 
 	strlcpy(client->name, info->type, sizeof(client->name));
+    printk("%s:%d %s\n", __func__, __LINE__, client->name);
 
 	/* Check for address validity */
 	status = i2c_check_client_addr_validity(client);
@@ -658,6 +664,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 
 	/* Check for address business */
 	status = i2c_check_addr_busy(adap, client->addr);
+	printk("%s:%d %d\n", __func__, __LINE__, status);
 	if (status)
 		goto out_err;
 
@@ -672,6 +679,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 		     client->addr | ((client->flags & I2C_CLIENT_TEN)
 				     ? 0xa000 : 0));
 	status = device_register(&client->dev);
+	printk("%s:%d %d\n", __func__, __LINE__, status);
 	if (status)
 		goto out_err;
 

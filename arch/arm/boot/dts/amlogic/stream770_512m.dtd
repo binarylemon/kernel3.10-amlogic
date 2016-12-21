@@ -525,6 +525,11 @@ void root_func(){
 		#size-cells = <0>;
 		use_pio = <0>;
 		master_i2c_speed = <100000>;
+//		tlv320aic3x_18:tlv320aic3x@18 {
+//		compatible = "ti,tlv320aic3x";
+//		reg = <0x18>;
+//		status = "ok";
+//		};
 	};
 
 //$$ DEVICE="I2C_D"
@@ -833,35 +838,80 @@ void root_func(){
 
     aml_audio_codec{
         compatible = "amlogic,audio_codec";
-        rt5616:rt5616{
-            codec_name = "rt5616";
-            i2c_addr = <0x1B>;
-            i2c_bus = "i2c_bus_d";
-            id_reg = <0x00>;
-            id_val = <0x21>;
-            capless = <0>;
-            status = "disable";
-        };
-        rt5631:rt5631{
-            codec_name = "rt5631";
-            i2c_addr = <0x1A>;
-            i2c_bus = "i2c_bus_b";
-            id_reg = <0x00>;
-            id_val = <0x01>;
-            capless = <0>;
-            status = "disable";
-        };
-        wm8960:wm8960{
-            codec_name = "wm8960";
-            i2c_addr = <0x1A>;
-            i2c_bus = "i2c_bus_b";
-            capless = <1>;
-	    status = "disable";
-        };
-        pmu3:pmu3{
-        	codec_name = "amlpmu3";
-		status = "disabled";
-        };
+	tlv320aic32x4@18{
+		codec_name = "tlv320aic32x4";
+		i2c_addr = <0x18>;
+		i2c_bus = "i2c_bus_c";
+		id_reg = <0x00>;
+		id_val = <0x00>;
+		capless = <0>;
+		status = "okay";
+	};
+	tlv320aic32x4@19{
+		codec_name = "tlv320aic32x4";
+		i2c_addr = <0x19>;
+		i2c_bus = "i2c_bus_c";
+		id_reg = <0x00>;
+		id_val = <0x00>;
+		capless = <0>;
+		status = "okay";
+	};
+	tlv320aic32x4@1a{
+		codec_name = "tlv320aic32x4";
+		i2c_addr = <0x1a>;
+		i2c_bus = "i2c_bus_c";
+		id_reg = <0x00>;
+		id_val = <0x00>;
+		capless = <0>;
+		status = "okay";
+	};
+	tlv320aic32x4@1b{
+		codec_name = "tlv320aic32x4";
+		i2c_addr = <0x1b>;
+		i2c_bus = "i2c_bus_c";
+		id_reg = <0x00>;
+		id_val = <0x00>;
+		capless = <0>;
+		status = "okay";
+	};
+//	tlv320aic3x@18{
+//		codec_name = "tlv320aic3x";
+//		i2c_addr = <0x18>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//        rt5616:rt5616{
+//            codec_name = "rt5616";
+//            i2c_addr = <0x1B>;
+//            i2c_bus = "i2c_bus_d";
+//            id_reg = <0x00>;
+//            id_val = <0x21>;
+//            capless = <0>;
+//            status = "disable";
+//        };
+//        rt5631:rt5631{
+//            codec_name = "rt5631";
+//            i2c_addr = <0x1A>;
+//            i2c_bus = "i2c_bus_b";
+//            id_reg = <0x00>;
+//            id_val = <0x01>;
+//            capless = <0>;
+//            status = "disable";
+//        };
+//        wm8960:wm8960{
+//            codec_name = "wm8960";
+//            i2c_addr = <0x1A>;
+//            i2c_bus = "i2c_bus_b";
+//            capless = <1>;
+//	    status = "disable";
+//        };
+//        pmu3:pmu3{
+//        	codec_name = "amlpmu3";
+//		status = "disabled";
+//        };
         dummy:dummy{
           codec_name = "dummy_codec";
           status = "okay";
@@ -880,7 +930,10 @@ void root_func(){
     aml_m8_sound_card{
         compatible = "sound_card, aml_snd_m8";
         aml,sound_card = "AML-M8AUDIO";
-        aml,codec_dai = "AML-M8","rt5616-aif1","rt5631-hifi","wm8960-hifi","pmu3-hifi","dummy_codec";
+        //aml,codec_dai = "AML-M8","rt5616-aif1","rt5631-hifi","wm8960-hifi","pmu3-hifi","dummy_codec";
+        //aml,codec_dai = "AML-M8","tlv320aic3x-hifi","dummy_codec";
+        aml,codec_dai = "AML-M8","tlv320aic32x4-hifi","dummy_codec";
+        //aml,codec_dai = "AML-M8","dummy_codec";
         //aml,codec_name = "aml_m8_codec.0","rt5616.4-001b";
         //aml,audio-codec = <&rt5616>;
         aml,audio-routing-rt5616 =
@@ -907,6 +960,10 @@ void root_func(){
         aml,audio-routing-dummy =
             "Ext Spk","LOUTL",
             "Ext Spk","LOUTR";
+	aml,audio-routing-tlv320aic32x4 =
+		"LINPUT1","Mic Bias";
+	aml,audio-routing-tlv320aic3x =
+		"LINPUT1","Mic Bias";
         sleep_time = <130>;
         mute_gpio = "GPIO_BSD_EN";
         //mute_gpio = "GPIOY_12";

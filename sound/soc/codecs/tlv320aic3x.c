@@ -1361,6 +1361,7 @@ static int aic3x_probe(struct snd_soc_codec *codec)
 {
 	struct aic3x_priv *aic3x = snd_soc_codec_get_drvdata(codec);
 	int ret, i;
+	printk("enter %s\n", __func__);
 
 	INIT_LIST_HEAD(&aic3x->list);
 	aic3x->codec = codec;
@@ -1512,6 +1513,8 @@ static int aic3x_i2c_probe(struct i2c_client *i2c,
 	int ret;
 	u32 value;
 
+	printk("enter %s\n", __func__);
+
 	aic3x = devm_kzalloc(&i2c->dev, sizeof(struct aic3x_priv), GFP_KERNEL);
 	if (aic3x == NULL) {
 		dev_err(&i2c->dev, "failed to create private data\n");
@@ -1570,8 +1573,13 @@ static int aic3x_i2c_probe(struct i2c_client *i2c,
 
 	aic3x->model = id->driver_data;
 
+	pr_info("xang i2c addr = 0x%02x, codec_cnt:%d, codec_mask:0x%x\n",
+			i2c->addr,
+			0, 0);
+
 	ret = snd_soc_register_codec(&i2c->dev,
 			&soc_codec_dev_aic3x, &aic3x_dai, 1);
+	printk("exit %s %d\n", __func__, ret);
 	return ret;
 }
 
