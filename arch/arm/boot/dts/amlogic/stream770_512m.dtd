@@ -838,8 +838,44 @@ void root_func(){
 
     aml_audio_codec{
         compatible = "amlogic,audio_codec";
-	tlv320aic32x4@18{
-		codec_name = "tlv320aic32x4";
+//	tlv320aic32x4@18{
+//		codec_name = "tlv320aic32x4";
+//		i2c_addr = <0x18>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//	tlv320aic32x4@19{
+//		codec_name = "tlv320aic32x4";
+//		i2c_addr = <0x19>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//	tlv320aic32x4@1a{
+//		codec_name = "tlv320aic32x4";
+//		i2c_addr = <0x1a>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//	tlv320aic32x4@1b{
+//		codec_name = "tlv320aic32x4";
+//		i2c_addr = <0x1b>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+	tlv320aic3x@18{
+		codec_name = "tlv320aic3x";
 		i2c_addr = <0x18>;
 		i2c_bus = "i2c_bus_c";
 		id_reg = <0x00>;
@@ -847,36 +883,27 @@ void root_func(){
 		capless = <0>;
 		status = "okay";
 	};
-	tlv320aic32x4@19{
-		codec_name = "tlv320aic32x4";
-		i2c_addr = <0x19>;
-		i2c_bus = "i2c_bus_c";
-		id_reg = <0x00>;
-		id_val = <0x00>;
-		capless = <0>;
-		status = "okay";
-	};
-	tlv320aic32x4@1a{
-		codec_name = "tlv320aic32x4";
-		i2c_addr = <0x1a>;
-		i2c_bus = "i2c_bus_c";
-		id_reg = <0x00>;
-		id_val = <0x00>;
-		capless = <0>;
-		status = "okay";
-	};
-	tlv320aic32x4@1b{
-		codec_name = "tlv320aic32x4";
-		i2c_addr = <0x1b>;
-		i2c_bus = "i2c_bus_c";
-		id_reg = <0x00>;
-		id_val = <0x00>;
-		capless = <0>;
-		status = "okay";
-	};
-//	tlv320aic3x@18{
+//	tlv320aic3x@19{
 //		codec_name = "tlv320aic3x";
-//		i2c_addr = <0x18>;
+//		i2c_addr = <0x19>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//	tlv320aic3x@1a{
+//		codec_name = "tlv320aic3x";
+//		i2c_addr = <0x1a>;
+//		i2c_bus = "i2c_bus_c";
+//		id_reg = <0x00>;
+//		id_val = <0x00>;
+//		capless = <0>;
+//		status = "okay";
+//	};
+//	tlv320aic3x@1b{
+//		codec_name = "tlv320aic3x";
+//		i2c_addr = <0x1b>;
 //		i2c_bus = "i2c_bus_c";
 //		id_reg = <0x00>;
 //		id_val = <0x00>;
@@ -931,8 +958,8 @@ void root_func(){
         compatible = "sound_card, aml_snd_m8";
         aml,sound_card = "AML-M8AUDIO";
         //aml,codec_dai = "AML-M8","rt5616-aif1","rt5631-hifi","wm8960-hifi","pmu3-hifi","dummy_codec";
-        //aml,codec_dai = "AML-M8","tlv320aic3x-hifi","dummy_codec";
-        aml,codec_dai = "AML-M8","tlv320aic32x4-hifi","dummy_codec";
+        aml,codec_dai = "AML-M8","tlv320aic3x-hifi","dummy_codec";
+        //aml,codec_dai = "AML-M8","tlv320aic32x4-hifi","dummy_codec";
         //aml,codec_dai = "AML-M8","dummy_codec";
         //aml,codec_name = "aml_m8_codec.0","rt5616.4-001b";
         //aml,audio-codec = <&rt5616>;
@@ -964,9 +991,12 @@ void root_func(){
 		"LINPUT1","Mic Bias";
 	aml,audio-routing-tlv320aic3x =
 		"LINPUT1","Mic Bias";
+	aml,audio-routing-tlv320aic3x-codec =
+		"LINPUT1","Mic Bias";
+	aml,audio-routing-tlv-codec =
+		"LINPUT1","Mic Bias";
         sleep_time = <130>;
-        mute_gpio = "GPIO_BSD_EN";
-        //mute_gpio = "GPIOY_12";
+        mute_gpio = "GPIOY_0";
         //mute_inv;
         hp_paraments = <800 300 0 5 1>;
         pinctrl-names = "aml_snd_m8";

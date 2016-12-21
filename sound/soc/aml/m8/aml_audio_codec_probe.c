@@ -177,7 +177,8 @@ static int test_codec_of_node(struct device_node* p_node, aml_audio_codec_info_t
             __func__,
             audio_codec_dev->name,
             audio_codec_dev->i2c_addr);
-#if 1
+#if 0
+		pr_info("aml-audio-probe manipulation\n");
 		ret = amlogic_gpio_name_map_num("GPIOH_4");
 		amlogic_gpio_request_one(ret, GPIOF_OUT_INIT_LOW,"aml-audio-probe");
 		amlogic_gpio_direction_output(ret, 0, "aml-audio-probe");
@@ -237,7 +238,7 @@ static int register_i2c_codec_device(aml_audio_codec_info_t* audio_codec_dev)
 	
 	adapter = i2c_get_adapter(audio_codec_dev->i2c_bus_type);
 	client = i2c_new_device(adapter, &board_info);
-	printk("codec_info.name_bus %s, codec_info.name %s, codec_info.codec_index %d\n", codec_info.name_bus, codec_info.name, codec_info.codec_index);
+	printk("BEFORE codec_info.name_bus %s, codec_info.name %s, codec_info.codec_index %d\n", codec_info.name_bus, codec_info.name, codec_info.codec_index);
     if (!strcmp("tlv320aic32x4", audio_codec_dev->name)) {
         /* re-define codec name */
         strlcpy(codec_info.name_bus, "tlv320aic32x4-codec", NAME_SIZE);
@@ -252,9 +253,10 @@ static int register_i2c_codec_device(aml_audio_codec_info_t* audio_codec_dev)
     } else {
     	snprintf(tmp, NAME_SIZE, "%s", audio_codec_dev->name);
     	strlcpy(codec_info.name, tmp, NAME_SIZE);
-    	snprintf(tmp, NAME_SIZE, "%s.%s", audio_codec_dev->name, dev_name(&client->dev));
+    	snprintf(tmp, NAME_SIZE, "%s-codec.%s", audio_codec_dev->name, dev_name(&client->dev));
     	strlcpy(codec_info.name_bus, tmp, NAME_SIZE);
     }
+	printk("AFTER codec_info.name_bus %s, codec_info.name %s, codec_info.codec_index %d\n", codec_info.name_bus, codec_info.name, codec_info.codec_index);
 
 	return 0;
 }
@@ -299,10 +301,11 @@ static int aml_audio_codec_probe(struct platform_device *pdev)
 		if (ret == 0){
 			ext_codec = 1;
 			printk("using external codec, index = %d\n", codec_info.codec_index);
-#if 1	//jma
+                codec_cnt ++;
+#if 0	//jma
 			/**/
-            if (!strcmp("tlv320aic32x4", audio_codec_dev->name)/* ||
-			    !strcmp("tlv320aic3x", audio_codec_dev->name)*/) {
+            if (!strcmp("tlv320aic32x4", audio_codec_dev->name) ||
+			    !strcmp("tlv320aic3x", audio_codec_dev->name)) {
                 /* why i2c time out??? */
                 audio_codec.name = kzalloc(NAME_SIZE, GFP_KERNEL);
                 kfree(audio_codec.name);
@@ -315,6 +318,7 @@ static int aml_audio_codec_probe(struct platform_device *pdev)
                 continue;
             } else 
 #endif
+
             {
 			    break;
             }
@@ -322,12 +326,12 @@ static int aml_audio_codec_probe(struct platform_device *pdev)
 		}
     }
 
-#if 1	//jma
+#if 0	//jma
     /*aml m8 to check which codec is used. Actually it's according to dts set.*/
     codec_info.codec_index = 1;
 
     if (codec_cnt) {
-	printk("ERR %s:%d\n", __func__, __LINE__);
+	printk("ZZZ %s:%d\n", __func__, __LINE__);
         goto exit;
     }
 #endif

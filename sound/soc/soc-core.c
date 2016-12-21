@@ -849,6 +849,7 @@ static int soc_bind_dai_link(struct snd_soc_card *card, int num)
 
 	/* Find CODEC from registered CODECs */
 	list_for_each_entry(codec, &codec_list, list) {
+		printk("%s:%d %s %s\n", __func__, __LINE__, codec->name, dai_link->codec_name);
 		if (dai_link->codec_of_node) {
 			if (codec->dev->of_node != dai_link->codec_of_node)
 				continue;

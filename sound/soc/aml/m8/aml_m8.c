@@ -249,6 +249,7 @@ static int aml_asoc_hw_params(struct snd_pcm_substream *substream,
             printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
             return ret;
         }
+#if 0 // zle parametre pre i2s
     }
     else if (strstr(codec_info.name_bus,"tlv320aic3x")) {
         ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_A |
@@ -257,6 +258,7 @@ static int aml_asoc_hw_params(struct snd_pcm_substream *substream,
             printk(KERN_ERR "%s: set codec dai fmt failed!\n", __func__);
             return ret;
         }
+#endif
     } else {
 	    ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
 	        SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
@@ -797,7 +799,7 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
 }
 
 static struct snd_soc_dai_link aml_codec_dai_link[] = {
-    {
+/*    {
         .name = "SND_M8",
         .stream_name = "AML PCM",
         .cpu_dai_name = "aml-i2s-dai.0",
@@ -805,19 +807,31 @@ static struct snd_soc_dai_link aml_codec_dai_link[] = {
         .platform_name = "aml-i2s.0",
         .codec_name = "dummy_codec.0",
         .ops = &aml_asoc_ops,
-    },
+    },*/
 #if 1
     {
-        .name = "SND_M8 TI",
-        .stream_name = "AML PCM TI",
+        .name = "SND_M8 TI1",
+        .stream_name = "AML PCM TI1",
+        .cpu_dai_name = "aml-i2s-dai.0",
+        .codec_dai_name = "tlv320aic3x-hifi",
+        .init = aml_asoc_init,
+        .platform_name = "aml-i2s.0",
+        .codec_name = "tlv320aic3x-codec.3-0018",
+        .ops = &aml_asoc_ops,
+    },
+#else
+    {
+        .name = "SND_M8 TI2",
+        .stream_name = "AML PCM TI2",
         .cpu_dai_name = "aml-i2s-dai.0",
         .codec_dai_name = "tlv320aic32x4-hifi",
         .platform_name = "aml-i2s.0",
         .codec_name = "tlv320aic32x4-codec",
         .ops = &aml_asoc_ops,
     },
+#endif
 //#ifdef CONFIG_SND_SOC_PCM2BT
-#else
+#if 0
     {
         .name = "BT Voice",
         .stream_name = "Voice PCM",
@@ -918,6 +932,8 @@ static int aml_m8_audio_probe(struct platform_device *pdev)
 	char tmp[NAME_SIZE];
     int ret = 0;
 
+    printk("enter %s\n", __func__);
+
 #ifdef CONFIG_USE_OF
     p_aml_audio = devm_kzalloc(&pdev->dev,
             sizeof(struct aml_audio_private_data), GFP_KERNEL);
@@ -972,6 +988,7 @@ static int aml_m8_audio_probe(struct platform_device *pdev)
     aml_m8_pinmux_init(card);
 
 
+    printk("leave %s\n", __func__);
     return 0;
 #endif
 
