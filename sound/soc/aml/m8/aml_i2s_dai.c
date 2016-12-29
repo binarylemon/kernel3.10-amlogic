@@ -318,6 +318,45 @@ EXPORT_SYMBOL_GPL(aml_i2s_dai);
 static const struct snd_soc_component_driver aml_component= {
 	.name		= "aml-i2s-dai",
 };
+
+static ssize_t i2s_mclk_tune_store(struct class *class, 
+			struct class_attribute *attr,	const char *buf, size_t count)
+{
+	int i,error;
+	char *token[2];
+	unsigned long data;
+	for (i = 0; i < 2; i++)
+		token[i] = strsep((char **)&buf, " ");
+	
+	if((error = strict_strtoul(token[1], 10, &data)) < 0)
+	{
+		printk(KERN_ERR "%s:strict_strtoul failed, error=0x%x\n", __func__, error);
+		return error;	
+	}
+	printk("i2s mclk tune: %s - %d ppm\n",token[0],(unsigned int)data);
+	if (!strcmp(token[0],"up")) {
+		audio_set_i2s_mclk_tune(0,(unsigned int)data);
+	} else if(!strcmp(token[0],"down")) {
+		audio_set_i2s_mclk_tune(1,(unsigned int)data);
+	}
+	return count;
+}
+
+static ssize_t i2s_mclk_tune_show(struct class *cls,struct class_attribute *attr,char *buf)
+{
+	return 0;
+}
+
+static struct class_attribute audio_i2s_mclk_tune_attrs[] = {
+    __ATTR(audio_i2s_mclk_tune,  S_IRUGO | S_IWUSR, i2s_mclk_tune_show,i2s_mclk_tune_store), 
+    __ATTR_NULL
+};
+
+static struct class audio_i2s_mclk_tune_cls = {
+    .name = "audio_i2s_mclk_tune",
+    .class_attrs = audio_i2s_mclk_tune_attrs,
+};
+
 static int aml_i2s_dai_probe(struct platform_device *pdev)
 {
 	struct aml_i2s *i2s = NULL;
@@ -339,6 +378,10 @@ static int aml_i2s_dai_probe(struct platform_device *pdev)
 	/* enable the mclk because m8 codec need it to setup */
 	audio_set_i2s_clk(AUDIO_CLK_FREQ_48, AUDIO_CLK_256FS, i2s->mpll);
 
+	ret = class_register(&audio_i2s_mclk_tune_cls);
+	if(ret){
+		printk("class register audio_i2s_mclk_tune_cls fail!\n");
+	}
 	return snd_soc_register_component(&pdev->dev, &aml_component,
 					 aml_i2s_dai, ARRAY_SIZE(aml_i2s_dai));
 

@@ -115,6 +115,7 @@ unsigned int audio_in_i2s_wr_ptr(void);
 unsigned int audio_in_spdif_wr_ptr(void);
 void audio_set_i2s_mode(u32 mode);
 void audio_set_i2s_clk(unsigned freq, unsigned fs_config, unsigned mpll);
+unsigned int audio_set_i2s_mclk_tune(int up_down,unsigned ppm_value);
 void audio_set_958_clk(unsigned freq, unsigned fs_config);
 void audio_enable_ouput(int flag);
 unsigned int read_i2s_rd_ptr(void);

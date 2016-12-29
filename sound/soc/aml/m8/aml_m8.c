@@ -59,6 +59,7 @@
 #define HP_DET                  1
 extern int ext_codec;
 extern struct device *spdif_dev;
+int i2s_mclk_ppm = 0;
 
 static void aml_set_clock(int enable)
 {
@@ -377,7 +378,29 @@ static int aml_audio_get_i2s_mute(struct snd_kcontrol *kcontrol,
     return 0;
 }
 
+static int aml_audio_set_i2s_mclk_tune(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+    int set_i2s_mclk_ppm = 0;
+    i2s_mclk_ppm = ucontrol->value.integer.value[0];
+    if(i2s_mclk_ppm > 1000)
+    	i2s_mclk_ppm = 1000;
+    set_i2s_mclk_ppm = i2s_mclk_ppm - 500;
+    printk(KERN_INFO "set_i2s_mclk_ppm: %d\n",set_i2s_mclk_ppm);
+    if(set_i2s_mclk_ppm >= 0)
+		audio_set_i2s_mclk_tune(0,set_i2s_mclk_ppm);
+    else if (set_i2s_mclk_ppm < 0)
+		audio_set_i2s_mclk_tune(1,abs(set_i2s_mclk_ppm));
+    return 0;
+}
 
+static int aml_audio_get_i2s_mclk_tune(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+    printk("%s\n",__func__);
+    ucontrol->value.integer.value[0] = i2s_mclk_ppm;
+    return 0;
+}
 
 static int aml_audio_set_spdif_mute(struct snd_kcontrol *kcontrol,
     struct snd_ctl_elem_value *ucontrol)
@@ -680,7 +703,10 @@ static const struct snd_kcontrol_new aml_m8_controls[] = {
     SOC_SINGLE_BOOL_EXT("aml audio i2s mute", 0,
         aml_audio_get_i2s_mute,
         aml_audio_set_i2s_mute),
-        
+    SOC_SINGLE_EXT("aml audio i2s mclk tune",
+	    0x00, 4, 1000, 0,
+        aml_audio_get_i2s_mclk_tune,
+        aml_audio_set_i2s_mclk_tune),        
     SOC_SINGLE_BOOL_EXT("aml audio spdif mute", 0,
         aml_audio_get_spdif_mute,
         aml_audio_set_spdif_mute),
