@@ -166,8 +166,10 @@ void root_func(){
 	uart_2{
 		compatible = "amlogic,aml_uart";
 		port_name = "uart_c";
-		status = "disabled";
+		status = "okay";
 		dev_name = "uart_2";
+		pinctrl-names = "default";
+		pinctrl-0 = <&c_uart_pins>;
 	};
 
 //$$ DEVICE="uart_3"
@@ -282,7 +284,7 @@ void root_func(){
             gpio_dat3 = "CARD_4";
             jtag_pin = "CARD_0";
             gpio_cd = "CARD_6";
-            gpio_ro = "GPIODV_25";
+//            gpio_ro = "GPIODV_25";
             irq_in = <3>;
             irq_out = <5>;
             card_type = <5>; /* 0:unknown, 1:mmc card(include eMMC), 2:sd card(include tSD), 3:sdio device(ie:sdio-wifi), 4:SD combo (IO+mem) card, 5:NON sdio device(means sd/mmc card), other:reserved */
@@ -478,7 +480,7 @@ void root_func(){
     i2c@c1108500{ /*I2C-A*/
 		compatible = "amlogic,aml_i2c";
 		dev_name = "i2c-A";
-		status = "ok";
+		status = "disable";
 		reg = <0xc1108500 0x20>;
 		device_id = <1>;
 		pinctrl-names="default";
@@ -1524,6 +1526,16 @@ void root_func(){
 		b_uart_pins:b_uart{
 			amlogic,setmask=<4 0x03c0>;
 			amlogic,pins="GPIOX_16", "GPIOX_17", "GPIOX_18", "GPIOX_19";
+		};
+//$$ MATCH "uart_2_pin_match" = "&c_uart_pins"
+//$$ L2 PROP_U32 2 = "amlogic,setmask"
+//$$ L2 PROP_STR 4 = "amlogic,pins"
+		c_uart_pins:c_uart{
+			amlogic,setmask=<6 0xC00000>;
+			amlogic,clrmask=<0 0x300300
+					 8 0x1800000
+					 9 0xC0000000>;
+			amlogic,pins="GPIODV_24", "GPIODV_25";
 		};
 
 //$$ MATCH "Nand_pin_0_match" = "&nand_input_state"
