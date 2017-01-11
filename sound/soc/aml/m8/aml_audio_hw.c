@@ -804,12 +804,12 @@ unsigned int audio_set_i2s_mclk_tune(int up_down,unsigned ppm_value)
     	__func__,audio_xd,mpll_reg_pre_value,sdmin_value,n2_integer,ppm_value,mpll_reg_value);
 
     // gate the clock off
-    WRITE_MPEG_REG( HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) & ~(1 << 8));
-    WRITE_MPEG_REG(AIU_CLK_CTRL_MORE, 0);
+    //WRITE_MPEG_REG( HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) & ~(1 << 8));
+    //WRITE_MPEG_REG(AIU_CLK_CTRL_MORE, 0);
     
     /*--- DAC clock  configuration--- */
     // Disable mclk
-    WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 0, 8, 1);
+    //WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 0, 8, 1);
     // Select clk source, 0=none; 1=Multi-Phase PLL0; 2=Multi-Phase PLL1; 3=Multi-Phase PLL2.
     WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, i2s_clk_src, 9, 2);
 
@@ -821,16 +821,16 @@ unsigned int audio_set_i2s_mclk_tune(int up_down,unsigned ppm_value)
     WRITE_MPEG_REG_BITS(AIU_CODEC_DAC_LRCLK_CTRL, 64-1, 0, 12);//set codec dac ratio---lrclk--64fs
     
     //mdelay(5);
-    for (i = 0; i < 500000; i++) ;
+    //for (i = 0; i < 500000; i++) ;
     // gate the clock on
-    WRITE_MPEG_REG( HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) | (1 << 8));
+    //WRITE_MPEG_REG( HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) | (1 << 8));
 
     //Audio DAC Clock enable
-    WRITE_MPEG_REG(HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) |(1<<23));
+    //WRITE_MPEG_REG(HHI_AUD_CLK_CNTL, READ_MPEG_REG(HHI_AUD_CLK_CNTL) |(1<<23));
     
     /* ---ADC clock  configuration--- */
     // Disable mclk
-    WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 0, 8, 1);
+    //WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 0, 8, 1);
     // Set pll over mclk ratio
     //we want 256fs ADC MLCK,so for over clock mode,divide more 2 than I2S  DAC CLOCK
 #if OVERCLOCK == 0
@@ -846,11 +846,11 @@ unsigned int audio_set_i2s_mclk_tune(int up_down,unsigned ppm_value)
     WRITE_MPEG_REG_BITS(AIU_CODEC_ADC_LRCLK_CTRL, 64-1, 0, 12); //set codec adc ratio---lrclk--64fs
 
     // Enable sclk
-    WRITE_MPEG_REG_BITS(AIU_CLK_CTRL_MORE, 1, 14, 1);
+    //WRITE_MPEG_REG_BITS(AIU_CLK_CTRL_MORE, 1, 14, 1);
     // Enable mclk
-    WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 1, 8, 1);
+    //WRITE_MPEG_REG_BITS(HHI_AUD_CLK_CNTL, 1, 8, 1);
 
-    for (i = 0; i < 200000; i++) ;
+    //for (i = 0; i < 200000; i++) ;
 
     return 0;
 }
