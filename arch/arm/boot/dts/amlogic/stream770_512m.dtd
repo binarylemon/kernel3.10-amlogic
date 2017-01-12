@@ -1920,9 +1920,10 @@ void root_func(){
 //$$ L2 PROP_U32 2 = "amlogic,clrmask"
 //$$ L2 PROP_STR 1 = "amlogic,pins"
         audio_spdif_pins:audio_pin1{
-            amlogic,setmask=<10 0x8>;       /*spdif_out*/
-            amlogic,clrmask=<10 0x80002000>;    /*spdif_out*/
-            amlogic,pins ="GPIOAO_13";        /*spdif_out*/
+            amlogic,setmask=<1 0x80>;       /*spdif_out*/
+            amlogic,clrmask=<1 0x10000
+			     3 0x40000>;    /*spdif_out*/
+            amlogic,pins ="GPIOY_3";        /*spdif_out*/
         };
 //$$ MATCH "Spi_pin_0_match" = "&aml_spi_nor_pins"
 //$$ L2 PROP_U32 2 = "amlogic,setmask"
