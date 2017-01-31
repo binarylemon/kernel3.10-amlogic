@@ -215,7 +215,6 @@ static int gpio_key_probe(struct platform_device *pdev)
     struct kp *kp;
     struct input_dev *input_dev;
     int i, ret, key_size;
-    struct gpio_key *key;
     struct gpio_platform_data *pdata = NULL;
     int *key_param = NULL;
 	int state=-EINVAL;
@@ -372,11 +371,9 @@ static int gpio_key_probe(struct platform_device *pdev)
     kp->keys = pdata->key;
     kp->key_num = pdata->key_num;
 
-    key = pdata->key;
-
     for (i=0; i<kp->key_num; i++) {
-        set_bit(key->code, input_dev->keybit);
-        printk(KERN_INFO "%s key(%d) registed.\n", key->name, key->code);
+        set_bit(pdata->key[i].code, input_dev->keybit);
+        printk(KERN_INFO "%s key(%d) registed.\n", pdata->key[i].name, pdata->key[i].code);
     }
     
     input_dev->name = "gpio_keypad";

@@ -1025,13 +1025,13 @@ void root_func(){
 		compatible = "amlogic,gpio_keypad";
 		status = "okay";
 		scan_period = <20>;
-		key_num = <1>;
-        key_name = "power";
+		key_num = <2>;
+        key_name = "power", "hostlink";
         gpio_high_z;
-		key_code = <116>;
-		key_pin = "GPIOAO_3";
-        irq_keyup = <6>;
-        irq_keydown = <7>;
+		key_code = <116 240>;
+		key_pin = "GPIOAO_3", "GPIOH_3";
+        irq_keyup = <6 0>;
+        irq_keydown = <7 0>;
 	};
 //$$ DEVICE="saradc"
 //$$ L2 PROP_STR = "status"
