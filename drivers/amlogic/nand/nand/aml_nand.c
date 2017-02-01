@@ -1933,7 +1933,9 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 #endif
 	}
 
-	return add_mtd_partitions(mtd, parts, nr);
+	int ret = add_mtd_partitions(mtd, parts, nr);
+	kfree(parts);
+	return ret;
 #else
 	//return add_mtd_device(mtd);
 #endif
@@ -5972,8 +5974,10 @@ RE_ENV:
 		CONFIG_ENV_SIZE, ENV_SIZE, sizeof(struct aml_nand_bbt_info), default_environment_size);
 	kfree(data_buf);
 	kfree(aml_oob_ops);
+	kfree(good_addr);
 	return 0;
 exit:
+	kfree(good_addr);
 	if (data_buf) {
 		kfree(data_buf);
 		data_buf = NULL;
