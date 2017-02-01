@@ -1019,7 +1019,7 @@ static int aml_m8_audio_probe(struct platform_device *pdev)
 #endif
 
 err:
-    kfree(p_aml_audio);
+    devm_kfree(&pdev->dev, p_aml_audio);
     return ret;
 }
 
@@ -1041,7 +1041,7 @@ static int aml_m8_audio_remove(struct platform_device *pdev)
 #endif
 
 	aml_m8_pinmux_deinit(card);
-    kfree(p_aml_audio);
+    devm_kfree(&pdev->dev, p_aml_audio);
     return ret;
 }
 
