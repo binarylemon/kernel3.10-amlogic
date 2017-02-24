@@ -365,7 +365,7 @@
 #define BBT_TAIL_MAGIC					"bbte"
 #define MTD_PART_MAGIC					"anpt"
 
-#define CONFIG_ENV_SIZE         		0x2000
+#define CONFIG_ENV_SIZE					(128 * 1024)
 
 #define ENV_SIZE (CONFIG_ENV_SIZE - (sizeof(uint32_t)))
 #define NAND_SYS_PART_SIZE				0x10000000
