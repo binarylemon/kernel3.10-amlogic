@@ -1194,12 +1194,16 @@ void root_func(){
 				offset=<0x0 0x300000>;
 				size=<0x0 0x80000>;
 			};
-			swufit{
+			u-boot-env{
 				offset=<0x0 0x380000>;
+				size=<0x0 0x80000>;
+			};
+			swufit{
+				offset=<0x0 0x400000>;
 				size=<0x0 0x02000000>;
 			};
 			fit{
-				offset=<0x0 0x2380000>;
+				offset=<0x0 0x2400000>;
 				size=<0x0 0x00C00000>;
 			};
 			data{
