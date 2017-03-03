@@ -922,18 +922,42 @@ exit:
 	return 0;
 }
 
+/* the same structure with uboot. */
+struct nand_page0_cfg_t{
+    unsigned ext;  // 26:pagelist, 24:a2, 23:no_rb, 22:large. 21-0:cmd.
+    short id;
+    short max; // id:0x100 user, max:0 disable.
+    unsigned char list[NAND_PAGELIST_CNT];
+};
+// read from page0, override default.
+struct nand_page0_info_t{
+        unsigned nand_read_info;
+        unsigned new_nand_type;
+        unsigned pages_in_block;
+        unsigned secure_block;
+        //unsigned reserved[4];
+    unsigned ce_mask;
+    unsigned reserved[3];
+};
+
 int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_t offset, int data_len, const uint8_t *buf,int oob_required, int page, int cached, int raw)
 {
 	struct aml_nand_chip *aml_chip = mtd_to_nand_chip(mtd);
 	int status, i, write_page, configure_data, pages_per_blk, ran_mode=0;
 	int new_nand_type = 0;
 	int en_slc = 0;
+	int nand_read_info;
+	uint8_t *page0_buf = chip->buffers->databuf;
+	struct nand_page0_cfg_t *info_cfg = (struct nand_page0_cfg_t *)page0_buf;
+	struct nand_page0_info_t *info = (struct nand_page0_info_t *)((page0_buf+384)-sizeof(struct nand_page0_info_t));
+
 //#ifdef MX_REVD
-	int magic = NAND_PAGELIST_MAGIC;
+//	int magic = NAND_PAGELIST_MAGIC;
 	int page_list[6] = {0x01, 0x02, 0x03, 0x06, 0x07, 0x0A};
 	unsigned priv_slc_page;
 	unsigned char *fill_buf =NULL;
 //#endif
+
 
 //#ifdef MX_REVD
 	if(aml_chip->new_nand_info.type == HYNIX_1YNM_8GB) {
@@ -975,6 +999,7 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_
 			else
 				configure_data = NFC_CMD_N2M(aml_chip->ran_mode, aml_chip->bch_mode, 0, (chip->ecc.size >> 3), chip->ecc.steps);
 
+#if 0
 			memset(chip->buffers->databuf, 0xbb, mtd->writesize);
 			memcpy(chip->buffers->databuf, (unsigned char *)(&configure_data), sizeof(int));
 			memcpy(chip->buffers->databuf + sizeof(int), (unsigned char *)(&pages_per_blk), sizeof(int));
@@ -988,12 +1013,61 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_
 				memcpy(chip->buffers->databuf + 6*sizeof(int), (unsigned char *)(&page_list[0]), 6*sizeof(int));
 			}
 //#endif
+#else
+			//printk("boot info page wrting, aml_chip->bch_mode %d, configure_data 0x%x\n", aml_chip->bch_mode, configure_data);
+			memset(page0_buf, 0x0, mtd->writesize);
+			
+			//ext bits means:
+			//bit 26: pagelist enable flag,
+			//bit 24: a2 cmd enable flag,
+			//bit 23: no_rb,
+			//bit 22: large.  large for what?
+			//bit 19: randomizer mode.
+			//bit 14-16: ecc mode
+			//bit 13: short mode
+			//bit 6-12:short page size
+			//bit 0-5: ecc pages.
+			//info_cfg->ext = (configure_data|(1<<23) |(1<<22) | (2<<20) |(1<<19));
+			info_cfg->ext = (configure_data | (1<<23) |(1<<22) | (2<<20));
+
+			//need finish here for romboot retry
+			info_cfg->id = 0;
+			info_cfg->max =0;
+
+			memset((unsigned char *)(&info_cfg->list[0]), 0, NAND_PAGELIST_CNT);
+			//printk("en_slc %d\n", en_slc);
+
+			if (en_slc) {
+				info_cfg->ext |= (1<<26);
+				if (en_slc == 1) {
+					//memcpy((unsigned char *)(&info_cfg->list[0]), (unsigned char *)(&slc_info->pagelist[1]), NAND_PAGELIST_CNT);
+				}
+				else if(en_slc == 2){
+					info_cfg->ext |= (1<<24);
+					for (i=1; i<NAND_PAGELIST_CNT; i++)
+						info_cfg->list[i-1] = i<<1;
+				}
+			}
+			//printk("info_cfg->ext 0x%x\n", info_cfg->ext);
+
+			// chip_num = controller->chip_num;
+			// aml_nand_msg("chip_num %d controller->chip_num %d",chip_num,controller->chip_num);
+			//nand_read_info = chip_num;	// chip_num occupy the lowest 2 bit
+			nand_read_info = 1;
+			info->nand_read_info = nand_read_info;
+			info->pages_in_block = pages_per_blk;
+			info->new_nand_type = new_nand_type;
+#endif //CONFIG_NAND_AML_M8
 				
 			chip->cmdfunc(mtd, NAND_CMD_SEQIN, 0x00, write_page);
 //#ifndef MX_REVD
 			if((mx_nand_check_chiprevd() != 1) && (en_slc == 0)){
 				ran_mode = aml_chip->ran_mode;
+			#if 0 /* for chip m6?? */
 				aml_chip->ran_mode = 0;
+			#else
+				aml_chip->ran_mode = 1;
+			#endif
 			}
 //#endif			
 			chip->ecc.write_page(mtd, chip, chip->buffers->databuf,oob_required);
