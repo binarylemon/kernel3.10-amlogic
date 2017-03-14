@@ -1,6 +1,8 @@
 config MW8977_WIFI
-	tristate "Mawell 8977 wifi support"
+	tristate "Marwell 8977 wifi support"
 	default n
+	select WIRELESS_EXT
+	select WEXT_PRIV
 	---help---
 	  This module adds support for wireless adapters based on
 	  Mawell 8977 chipset.
