@@ -283,7 +283,7 @@ static void m3_nand_hw_init(struct aml_nand_chip *aml_chip)
     NFC_SET_CORE_PLL(((0<<9) | (1<<8) | 3));
 
     bus_cycle  = 6;
-    bus_timing = bus_cycle + 2;
+    bus_timing = bus_cycle + 1;
     printk("init bus_cycle=%d, bus_timing=%d\n", bus_cycle, bus_timing);
 
 #else
@@ -333,7 +333,7 @@ static void m3_nand_adjust_timing(struct aml_nand_chip *aml_chip)
 	NFC_SET_CORE_PLL(((1<<9) | (1<<8) | 3));
 
 	bus_cycle  = 6;
-	bus_timing = bus_cycle + 2;
+	bus_timing = bus_cycle + 1;
 	printk("bus_cycle=%d, bus_timing=%d\n", bus_cycle, bus_timing);
 #else
 	struct clk *sys_clk;
