@@ -1934,7 +1934,10 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 	}
 
 	int ret = add_mtd_partitions(mtd, parts, nr);
-	kfree(parts);
+
+	if (0 == plat->platform_nand_data.chip.nr_partitions)
+		kfree(parts);
+
 	return ret;
 #else
 	//return add_mtd_device(mtd);
