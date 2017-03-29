@@ -1157,9 +1157,9 @@ void root_func(){
 			enable_pad ="ce0";
 			busy_pad = "rb0";
 			timming_mode = "mode5";
-			bch_mode = "bch60_1k";
+			bch_mode = "bch8_512";
 			t_rea = <20>;
-			t_rhoh = <15>;
+			t_rhoh = <25>;
 			chip_num = <1>;
 			part_num = <0>;
 			rb_detect = <1>;
@@ -1179,10 +1179,9 @@ void root_func(){
 			enable_pad ="ce0","ce1";
 			busy_pad = "rb0","rb1";
 			timming_mode = "mode5";
-			bch_mode = "bch60_1k";
-			plane_mode = "twoplane";
+			bch_mode = "bch8_512";
 			t_rea = <20>;
-			t_rhoh = <15>;
+			t_rhoh = <25>;
 			chip_num = <2>;
 			part_num = <5>;
 			partition = <&nand_partitions>;
