@@ -7,6 +7,8 @@ config AM_WIFI_SD_MMC
 	bool "Amlogic SDIO Wi-Fi support"
 	depends on AM_WIFI
 	default n
+	select WIRELESS_EXT
+	select WEXT_PRIV
 
 config DHD_USE_STATIC_BUF
     bool "broadcom wifi static buff support"
