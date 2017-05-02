@@ -103,12 +103,12 @@ static void kp_work(struct kp *kp)
 		//printk("get gpio key status %s(%d)\n",key->name, io_status);
 		if(io_status != key->status ){
 			if (io_status) {
-				printk("key %d up\n", key->code);
+				//printk("key %d up\n", key->code);
 				input_report_key(kp->input, key->code, 0);
 				input_sync(kp->input);
 			}
 			else {
-				printk("key %d down\n", key->code);
+				//printk("key %d down\n", key->code);
 				input_report_key(kp->input, key->code, 1);
 				input_sync(kp->input);
 			}
