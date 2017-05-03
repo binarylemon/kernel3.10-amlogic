@@ -48,7 +48,7 @@ static struct early_suspend early_suspend;
 static int early_suspend_flag = 0;
 #endif
 
-#define CONFIG_AO_TRIG_CLK 1
+//#define CONFIG_AO_TRIG_CLK
 #ifdef CONFIG_AO_TRIG_CLK
 #include "arc_trig_clk.h"
 #endif
