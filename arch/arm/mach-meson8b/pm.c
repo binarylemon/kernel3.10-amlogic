@@ -48,7 +48,7 @@ static struct early_suspend early_suspend;
 static int early_suspend_flag = 0;
 #endif
 
-//#define CONFIG_AO_TRIG_CLK
+#define CONFIG_AO_TRIG_CLK 1
 #ifdef CONFIG_AO_TRIG_CLK
 #include "arc_trig_clk.h"
 #endif
@@ -262,6 +262,7 @@ int run_arc_program(void)
 	unsigned vaddr2,v;
 	unsigned* pbuffer;
 	vaddr2 = IO_SRAM_BASE;
+	printk("ENTER %s\n", __func__);
 	
 	if(cec_config & 0x1)// 4 bytes: use to control cec switch on/off,distinguish between Mbox and Tablet. bit[0]:1:Mbox; 0:Tablet
     {
@@ -301,6 +302,7 @@ int run_arc_program(void)
 
 int stop_ao_cpu(void)
 {
+	printk("ENTER %s\n", __func__);
 	if(cec_config & 0x1)// 4 bytes: use to control cec switch on/off,distinguish between Mbox and Tablet. bit[0]:1:Mbox; 0:Tablet
     {
     	aml_write_reg32(P_AO_RTI_STATUS_REG1, 0xddddeeee); //ask ao to halt.
