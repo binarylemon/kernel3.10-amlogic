@@ -279,7 +279,13 @@ int run_arc_program(void)
 	printk("%s:%d\n", __func__, __LINE__);
         v = ((IO_SRAM_PHY_BASE & 0xFFFFF)>>12);
 	printk("%s:%d\n", __func__, __LINE__);
-        aml_write_reg32(P_AO_SECURE_REG0, v<<8 | aml_read_reg32(P_AO_SECURE_REG0)); //TEST_N : 1->output mode; 0->input mode
+
+	//TEST_N : 1->output mode; 0->input mode
+#ifndef CONFIG_MESON_TRUSTZONE
+	aml_write_reg32(P_AO_SECURE_REG0, v << 8 | aml_read_reg32(P_AO_SECURE_REG0));
+#else
+	meson_secure_reg_write(P_AO_SECURE_REG0, v << 8 | meson_secure_reg_read(P_AO_SECURE_REG0));
+#endif
 	printk("%s:%d\n", __func__, __LINE__);
     
         aml_write_reg32(P_AO_RTI_STATUS_REG1, 0);//clean status
