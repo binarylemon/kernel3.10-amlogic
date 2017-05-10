@@ -31,42 +31,11 @@ EXPORT_SYMBOL(ext_codec);
 
 static const struct regmap_config codec_regmaps[] = {
 	{
-		.name = "rt5616",
-		.reg_bits =		8,
-		.val_bits =		16,
-		.max_register =		0xff,
-	},
-	{
-		.name = "rt5631",
-		.reg_bits = 	8,
-		.val_bits = 	16,
-		.max_register = 	0x7e,
-	},
-	{
-		.name = "wm8960",
-		.reg_bits = 	7,
-		.val_bits = 	9,
-		.max_register = 	0x37,
-	},
-	{
-		.name = "es8323",
-		.reg_bits = 	8,
-		.val_bits = 	8,
-		.max_register = 	0x35,
-	},
-	{
 		.name = "tlv320aic32x4",
 		.reg_bits =     8,
 		.val_bits =     8,
 		.max_register = 189,
 	},
-	{
-		.name = "tlv320aic3x",
-		.reg_bits =     8,
-		.val_bits =     8,
-		.max_register = 100,
-	},
-	
 };
 
 static int test_codec_of_node(struct device_node* p_node, aml_audio_codec_info_t* audio_codec_dev)
@@ -189,7 +158,7 @@ static int test_codec_of_node(struct device_node* p_node, aml_audio_codec_info_t
 #endif
 	}
 
-
+	printk("%s:%d devm_regmap_init_i2c %d\n", __func__, __LINE__, codec_info.codec_index);
 	regmap = devm_regmap_init_i2c(client, &codec_regmaps[codec_info.codec_index]);
 	if (IS_ERR(regmap)){
 		ret = PTR_ERR(regmap);
@@ -349,7 +318,7 @@ static int aml_audio_codec_probe(struct platform_device *pdev)
 		goto exit;
 	}	
 
-	if ((0 == codec_cnt)&& ext_codec &&(!strcmp(audio_codec_dev->name, "dummy_codec"))){
+	if (/*(0 == codec_cnt)&&*/ ext_codec &&(!strcmp(audio_codec_dev->name, "dummy_codec"))){
 		printk("using external dummy codec\n");
 		strlcpy(codec_info.name_bus, "dummy_codec.0", NAME_SIZE);
 		strlcpy(codec_info.name, "dummy", NAME_SIZE);

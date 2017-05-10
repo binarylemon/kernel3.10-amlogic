@@ -825,7 +825,8 @@ static int aml_asoc_init(struct snd_soc_pcm_runtime *rtd)
 }
 
 static struct snd_soc_dai_link aml_codec_dai_link[] = {
-/*    {
+#if 0
+    {
         .name = "SND_M8",
         .stream_name = "AML PCM",
         .cpu_dai_name = "aml-i2s-dai.0",
@@ -833,26 +834,16 @@ static struct snd_soc_dai_link aml_codec_dai_link[] = {
         .platform_name = "aml-i2s.0",
         .codec_name = "dummy_codec.0",
         .ops = &aml_asoc_ops,
-    },*/
-#if 1
+    },
+#else
     {
-        .name = "SND_M8 TI1",
-        .stream_name = "AML PCM TI1",
+        .name = "SND_M8",
+        .stream_name = "AML PCM",
         .cpu_dai_name = "aml-i2s-dai.0",
         .codec_dai_name = "tlv320aic3x-hifi",
         .init = aml_asoc_init,
         .platform_name = "aml-i2s.0",
         .codec_name = "tlv320aic3x-codec.3-0018",
-        .ops = &aml_asoc_ops,
-    },
-#else
-    {
-        .name = "SND_M8 TI2",
-        .stream_name = "AML PCM TI2",
-        .cpu_dai_name = "aml-i2s-dai.0",
-        .codec_dai_name = "tlv320aic32x4-hifi",
-        .platform_name = "aml-i2s.0",
-        .codec_name = "tlv320aic32x4-codec",
         .ops = &aml_asoc_ops,
     },
 #endif

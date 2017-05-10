@@ -961,11 +961,8 @@ void root_func(){
     aml_m8_sound_card{
         compatible = "sound_card, aml_snd_m8";
         aml,sound_card = "AML-M8AUDIO";
-        //aml,codec_dai = "AML-M8","rt5616-aif1","rt5631-hifi","wm8960-hifi","pmu3-hifi","dummy_codec";
         aml,codec_dai = "AML-M8","tlv320aic3x-hifi","dummy_codec";
-        //aml,codec_dai = "AML-M8","tlv320aic32x4-hifi","dummy_codec";
         //aml,codec_dai = "AML-M8","dummy_codec";
-        //aml,codec_name = "aml_m8_codec.0","rt5616.4-001b";
         //aml,audio-codec = <&rt5616>;
         aml,audio-routing-rt5616 =
             "Ext Spk","LOUTL",
