@@ -842,42 +842,6 @@ void root_func(){
 
     aml_audio_codec{
         compatible = "amlogic,audio_codec";
-//	tlv320aic32x4@18{
-//		codec_name = "tlv320aic32x4";
-//		i2c_addr = <0x18>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//	tlv320aic32x4@19{
-//		codec_name = "tlv320aic32x4";
-//		i2c_addr = <0x19>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//	tlv320aic32x4@1a{
-//		codec_name = "tlv320aic32x4";
-//		i2c_addr = <0x1a>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//	tlv320aic32x4@1b{
-//		codec_name = "tlv320aic32x4";
-//		i2c_addr = <0x1b>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
 	tlv320aic3x@18{
 		codec_name = "tlv320aic3x";
 		i2c_addr = <0x18>;
@@ -887,62 +851,6 @@ void root_func(){
 		capless = <0>;
 		status = "okay";
 	};
-//	tlv320aic3x@19{
-//		codec_name = "tlv320aic3x";
-//		i2c_addr = <0x19>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//	tlv320aic3x@1a{
-//		codec_name = "tlv320aic3x";
-//		i2c_addr = <0x1a>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//	tlv320aic3x@1b{
-//		codec_name = "tlv320aic3x";
-//		i2c_addr = <0x1b>;
-//		i2c_bus = "i2c_bus_c";
-//		id_reg = <0x00>;
-//		id_val = <0x00>;
-//		capless = <0>;
-//		status = "okay";
-//	};
-//        rt5616:rt5616{
-//            codec_name = "rt5616";
-//            i2c_addr = <0x1B>;
-//            i2c_bus = "i2c_bus_d";
-//            id_reg = <0x00>;
-//            id_val = <0x21>;
-//            capless = <0>;
-//            status = "disable";
-//        };
-//        rt5631:rt5631{
-//            codec_name = "rt5631";
-//            i2c_addr = <0x1A>;
-//            i2c_bus = "i2c_bus_b";
-//            id_reg = <0x00>;
-//            id_val = <0x01>;
-//            capless = <0>;
-//            status = "disable";
-//        };
-//        wm8960:wm8960{
-//            codec_name = "wm8960";
-//            i2c_addr = <0x1A>;
-//            i2c_bus = "i2c_bus_b";
-//            capless = <1>;
-//	    status = "disable";
-//        };
-//        pmu3:pmu3{
-//        	codec_name = "amlpmu3";
-//		status = "disabled";
-//        };
         dummy:dummy{
           codec_name = "dummy_codec";
           status = "okay";
@@ -962,43 +870,15 @@ void root_func(){
         compatible = "sound_card, aml_snd_m8";
         aml,sound_card = "AML-M8AUDIO";
         aml,codec_dai = "AML-M8","tlv320aic3x-hifi","dummy_codec";
-        //aml,codec_dai = "AML-M8","dummy_codec";
-        //aml,audio-codec = <&rt5616>;
-        aml,audio-routing-rt5616 =
-            "Ext Spk","LOUTL",
-            "Ext Spk","LOUTR",
-            "HP","HPOL",
-            "HP","HPOR",
-            "micbias1","MAIN MIC",
-            "IN2P","micbias1";
-        aml,audio-routing-amlm8 =
-            "Ext Spk","LINEOUTL",
-            "Ext Spk","LINEOUTR",
-            "HP","HP_L",
-            "HP","HP_R",
-            "MICBIAS","MAIN MIC",
-            "LINPUT1","MICBIAS";
-        aml,audio-routing-amlpmu3 =
-            "Ext Spk","LINEOUTL1",
-            "Ext Spk","LINEOUTR1",
-            "HP","HP_L",
-            "HP","HP_R",
-            "Mic Bias1","MAIN MIC",
-            "LINEINLP","Mic Bias1";
         aml,audio-routing-dummy =
             "Ext Spk","LOUTL",
             "Ext Spk","LOUTR";
-	aml,audio-routing-tlv320aic32x4 =
-		"LINPUT1","Mic Bias";
 	aml,audio-routing-tlv320aic3x =
 		"LINPUT1","Mic Bias";
 	aml,audio-routing-tlv320aic3x-codec =
 		"LINPUT1","Mic Bias";
-	aml,audio-routing-tlv-codec =
-		"LINPUT1","Mic Bias";
         sleep_time = <130>;
         mute_gpio = "GPIOY_0";
-        //mute_inv;
         hp_paraments = <800 300 0 5 1>;
         pinctrl-names = "aml_snd_m8";
         pinctrl-0 = <&audio_pins>;
