@@ -1166,6 +1166,7 @@ static int aic3x_set_power(struct snd_soc_codec *codec, int power)
 	struct aic3x_priv *aic3x = snd_soc_codec_get_drvdata(codec);
 	int i, ret;
 	u8 *cache = codec->reg_cache;
+	unsigned int pll_c, pll_d;
 
 	if (power) {
 		/*ret = regulator_bulk_enable(ARRAY_SIZE(aic3x->supplies),
@@ -1192,6 +1193,18 @@ static int aic3x_set_power(struct snd_soc_codec *codec, int power)
 		if (aic3x->model == AIC3X_MODEL_3007)
 			aic3x_init_3007(codec);
 		codec->cache_sync = 0;
+
+		/* Rewrite paired PLL D registers in case cached sync skipped
+		 * writing one of them and thus caused other one also not
+		 * being written
+		 */
+		pll_c = snd_soc_read(codec, AIC3X_PLL_PROGC_REG);
+		pll_d = snd_soc_read(codec, AIC3X_PLL_PROGD_REG);
+		if (pll_c == aic3x_reg[AIC3X_PLL_PROGC_REG] ||
+			pll_d == aic3x_reg[AIC3X_PLL_PROGD_REG]) {
+			snd_soc_write(codec, AIC3X_PLL_PROGC_REG, pll_c);
+			snd_soc_write(codec, AIC3X_PLL_PROGD_REG, pll_d);
+		}
 	} else {
 		/*
 		 * Do soft reset to this codec instance in order to clear
