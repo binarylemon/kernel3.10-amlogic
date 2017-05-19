@@ -842,8 +842,8 @@ void root_func(){
 
     aml_audio_codec{
         compatible = "amlogic,audio_codec";
-	tlv320aic3x@18{
-		codec_name = "tlv320aic3x";
+	tlv320aic3104@18{
+		codec_name = "tlv320aic3104";
 		i2c_addr = <0x18>;
 		i2c_bus = "i2c_bus_c";
 		id_reg = <0x00>;

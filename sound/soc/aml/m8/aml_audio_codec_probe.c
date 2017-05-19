@@ -141,7 +141,7 @@ static int test_codec_of_node(struct device_node* p_node, aml_audio_codec_info_t
 		//amlogic_set_value(ret, 1, "aml-audio-probe");
 		amlogic_gpio_direction_output(ret, 1, "aml-audio-probe");
 	}
-	if (!strcmp("tlv320aic3x", audio_codec_dev->name)) {
+	if (!strcmp("tlv320aic3104", audio_codec_dev->name)) {
 		pr_info("%s %s i2c address:%x is define in dts.\n",
             __func__,
             audio_codec_dev->name,
@@ -208,13 +208,12 @@ static int register_i2c_codec_device(aml_audio_codec_info_t* audio_codec_dev)
         /* re-define codec name */
         strlcpy(codec_info.name_bus, "tlv320aic32x4-codec", NAME_SIZE);
         strlcpy(codec_info.name, "tlv320aic32x4", NAME_SIZE);
-#if 0
     }
-    else if (!strcmp("tlv320aic3x", audio_codec_dev->name)) {
+    else if (!strcmp("tlv320aic3104", audio_codec_dev->name)) {
         /* re-define codec name */
-        strlcpy(codec_info.name_bus, "tlv320aic3x-codec", NAME_SIZE);
+        snprintf(tmp, NAME_SIZE, "tlv320aic3x-codec.%s", dev_name(&client->dev));
+        strlcpy(codec_info.name_bus, tmp, NAME_SIZE);
         strlcpy(codec_info.name, "tlv320aic3x", NAME_SIZE);
-#endif
     } else {
     	snprintf(tmp, NAME_SIZE, "%s", audio_codec_dev->name);
     	strlcpy(codec_info.name, tmp, NAME_SIZE);
