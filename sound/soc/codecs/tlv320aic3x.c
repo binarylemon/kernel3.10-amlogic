@@ -219,7 +219,8 @@ static int mic_bias_event(struct snd_soc_dapm_widget *w,
 
 	case SND_SOC_DAPM_PRE_PMD:
 		snd_soc_update_bits(codec, MICBIAS_CTRL,
-				MICBIAS_LEVEL_MASK, 0);
+				MICBIAS_LEVEL_MASK,
+				aic3x->micbias_vg << MICBIAS_LEVEL_SHIFT);
 		break;
 	}
 	return 0;
@@ -1639,7 +1640,7 @@ static int aic3x_probe(struct snd_soc_codec *codec)
 #endif
 
 	printk("%s:%d\n", __func__, __LINE__);
-	codec->cache_only = 0;//1;
+	codec->cache_only = 1;
 	aic3x_init(codec);
 
 	printk("%s:%d setup:%d\n", __func__, __LINE__, aic3x->setup);
@@ -1722,7 +1723,7 @@ static int aic3x_remove(struct snd_soc_codec *codec)
 }
 
 static struct snd_soc_codec_driver soc_codec_dev_aic3x = {
-	//.set_bias_level = aic3x_set_bias_level,
+	.set_bias_level = aic3x_set_bias_level,
 	.idle_bias_off = true,
 	.reg_cache_size = ARRAY_SIZE(aic3x_reg),
 	.reg_word_size = sizeof(u8),
@@ -1819,7 +1820,8 @@ static int aic3x_i2c_probe(struct i2c_client *i2c,
 	} else {
 		aic3x->gpio_reset = -1;
 	}
-			aic3x->gpio_reset = -1;
+	aic3x->gpio_reset = -1;
+	aic3x->micbias_vg = AIC3X_MICBIAS_AVDDV;
 		
 	aic3x->model = id->driver_data;
 
