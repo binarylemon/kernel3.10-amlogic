@@ -385,6 +385,7 @@ void audio_in_i2s_enable(int flag)
   	int rd = 0, start=0;
 	if(flag){
           /* reset only when start i2s input */
+ 	aml_set_reg32_mask(P_AO_RTI_PIN_MUX_REG, (0xf << 27));
 reset_again:
 	     WRITE_MPEG_REG_BITS(AUDIN_FIFO0_CTRL, 1, 1, 1); // reset FIFO 0
             WRITE_MPEG_REG(AUDIN_FIFO0_PTR, 0);
@@ -397,7 +398,11 @@ reset_again:
 			WRITE_MPEG_REG_BITS(AUDIN_I2SIN_CTRL, 1, I2SIN_EN, 1);
 
 	}else{
-			WRITE_MPEG_REG_BITS(AUDIN_I2SIN_CTRL, 0, I2SIN_EN, 1);
+        if (!if_audio_out_enable()) {
+	        aml_clr_reg32_mask(P_AO_RTI_PIN_MUX_REG, (0xf << 27));
+            printk("%s no record and play, clear pinmux\n",__func__);
+        }
+		WRITE_MPEG_REG_BITS(AUDIN_I2SIN_CTRL, 0, I2SIN_EN, 1);
 	}
 }
 
@@ -1154,13 +1159,18 @@ void audio_set_958_mode(unsigned mode, _aiu_958_raw_setting_t * set)
 void audio_out_i2s_enable(unsigned flag)
 {
     if (flag) {
+        aml_set_reg32_mask(P_AO_RTI_PIN_MUX_REG, (0xf << 27));
         WRITE_MPEG_REG(AIU_RST_SOFT, 0x01);
         READ_MPEG_REG(AIU_I2S_SYNC);
         WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 3, 1, 2);
         // Maybe cause POP noise
         // audio_i2s_unmute();
     } else {
-        WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 1, 2);
+        if (!if_audio_in_i2s_enable()) {
+            aml_clr_reg32_mask(P_AO_RTI_PIN_MUX_REG, (0xf << 27));
+            printk("%s no record and play, clear pinmux\n",__func__);
+        }
+	WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 1, 2);
 
         // Maybe cause POP noise
         // audio_i2s_mute();
