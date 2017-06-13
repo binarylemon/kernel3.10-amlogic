@@ -2827,6 +2827,7 @@ static void nand_set_defaults(struct nand_chip *chip, int busw)
 
 }
 
+#if 0
 /* Sanitize ONFI strings so we can safely print them */
 static void sanitize_string(uint8_t *s, size_t len)
 {
@@ -2936,7 +2937,7 @@ static int nand_flash_detect_onfi(struct mtd_info *mtd, struct nand_chip *chip,
 	pr_info("ONFI flash detected\n");
 	return 1;
 }
-
+#endif
 /*
  * nand_id_has_period - Check if an ID string has a given wraparound period
  * @id_data: the ID string
