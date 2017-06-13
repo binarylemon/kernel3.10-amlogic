@@ -146,16 +146,12 @@ static int test_codec_of_node(struct device_node* p_node, aml_audio_codec_info_t
             __func__,
             audio_codec_dev->name,
             audio_codec_dev->i2c_addr);
-#if 0
 		pr_info("aml-audio-probe manipulation\n");
 		ret = amlogic_gpio_name_map_num("GPIOH_4");
-		amlogic_gpio_request_one(ret, GPIOF_OUT_INIT_LOW,"aml-audio-probe");
+		amlogic_gpio_request_one(ret, GPIOF_OUT_INIT_LOW, "aml-audio-probe");
 		amlogic_gpio_direction_output(ret, 0, "aml-audio-probe");
-		amlogic_set_value(ret, 0, "aml-audio-probe");
 		mdelay(200);
 		amlogic_set_value(ret, 1, "aml-audio-probe");
-		amlogic_gpio_direction_output(ret, 1, "aml-audio-probe");
-#endif
 	}
 
 	printk("%s:%d devm_regmap_init_i2c %d\n", __func__, __LINE__, codec_info.codec_index);
