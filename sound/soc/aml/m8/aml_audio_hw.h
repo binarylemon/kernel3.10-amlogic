@@ -1,5 +1,6 @@
 #ifndef __AML_AUDIO_HW_H__
 #define __AML_AUDIO_HW_H__
+#include "sound/asound.h"
 #include <mach/power_gate.h>
 #if MESON_CPU_TYPE < MESON_CPU_TYPE_MESON6
 #define AUDIO_CLK_GATE_ON(a)
@@ -104,16 +105,23 @@ extern unsigned ENABLE_IEC958;
 extern unsigned IEC958_MODE;
 extern unsigned I2S_MODE;
 
-void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel);
+void audio_set_aiubuf(u32 addr, u32 size,
+	unsigned int channel,
+	snd_pcm_format_t format);
 void audio_set_958outbuf(u32 addr, u32 size, int flag);
-void audio_in_i2s_set_buf(u32 addr, u32 size,u32 i2s_mode, u32 i2s_sync);
+void audio_in_i2s_set_buf(u32 addr, u32 size, u32 i2s_mode,
+	u32 i2s_sync, int ch, snd_pcm_format_t format);
 void audio_in_spdif_set_buf(u32 addr, u32 size);
 void audio_in_i2s_enable(int flag);
 void audio_in_spdif_enable(int flag);
 unsigned int audio_in_i2s_rd_ptr(void);
 unsigned int audio_in_i2s_wr_ptr(void);
 unsigned int audio_in_spdif_wr_ptr(void);
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+void audio_set_i2s_mode(u32 mode, unsigned int channel);
+#else
 void audio_set_i2s_mode(u32 mode);
+#endif
 void audio_set_i2s_clk(unsigned freq, unsigned fs_config, unsigned mpll);
 unsigned int audio_set_i2s_mclk_tune(int up_down,unsigned ppm_value);
 void audio_set_958_clk(unsigned freq, unsigned fs_config);

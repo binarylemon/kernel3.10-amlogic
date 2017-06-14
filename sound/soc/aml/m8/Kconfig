@@ -22,3 +22,18 @@ config SND_AML_M8_PCM
 config SND_AML_M_DUMMY_CODEC
     tristate "AML M series board with DUMMY_CODEC"
     select SND_SOC_DUMMY_CODEC
+if SND_AML_M8
+config SND_AML_SPLIT_MODE
+	tristate "AIU split mode, otherwise normal mode"
+	depends on SND_AML_M8_SOC
+	help
+		Say 'Y' to enable AIU split mode. If not, it's normal mode.
+
+config SND_AML_SPLIT_MODE_MMAP
+	tristate "AIU split mode, mmap"
+	depends on SND_AML_SPLIT_MODE
+	depends on SND_AML_M8_SOC
+	help
+		Say 'Y' or 'N' to enable/disable AIU split mmap
+
+endif

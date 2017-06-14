@@ -203,17 +203,33 @@ int audio_clock_config_table[][11][2]=
 };
 #endif
 
-
-void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel)
+void audio_set_aiubuf(u32 addr, u32 size,
+	unsigned int channel,
+	snd_pcm_format_t format)
 {
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+       WRITE_MPEG_REG(AIU_MEM_I2S_START_PTR, addr & 0xffffff00);
+       WRITE_MPEG_REG(AIU_MEM_I2S_RD_PTR, addr & 0xffffff00);
+#else
     WRITE_MPEG_REG(AIU_MEM_I2S_START_PTR, addr & 0xffffffc0);
     WRITE_MPEG_REG(AIU_MEM_I2S_RD_PTR, addr & 0xffffffc0);
+#endif
+
     if(channel == 8){
         WRITE_MPEG_REG_BITS(AIU_CLK_CTRL_MORE, 1, 6, 1);
-        WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 256); 
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+       WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffff00) + (size & 0xffffff00) - 256);
+#else
+       WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 256);
+#endif
+
     }else{
         WRITE_MPEG_REG_BITS(AIU_CLK_CTRL_MORE, 0, 6, 1);
-        WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 64);   //this is for 16bit 2 channel
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+       WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffff00) + (size & 0xffffff00) - 256);
+#else
+       WRITE_MPEG_REG(AIU_MEM_I2S_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 64);   //this is for 16bit 2 channel
+#endif
     }
 
     WRITE_MPEG_REG(AIU_I2S_MISC,		0x0004);	// Hold I2S
@@ -223,15 +239,22 @@ void audio_set_aiubuf(u32 addr, u32 size, unsigned int channel)
 
 	if(channel == 8){
 		printk(" %s channel == 8\n",__FUNCTION__);
-	WRITE_MPEG_REG(AIU_MEM_I2S_MASKS,		(24 << 16) |	// [31:16] IRQ block.
+		WRITE_MPEG_REG(AIU_MEM_I2S_MASKS,		(24 << 16) |	// [31:16] IRQ block.
 								(0xff << 8) |	// [15: 8] chan_mem_mask. Each bit indicates which channels exist in memory
 								(0xff << 0));	// [ 7: 0] chan_rd_mask.  Each bit indicates which channels are READ from memory
 		}
-	else 
-	WRITE_MPEG_REG(AIU_MEM_I2S_MASKS,		(24 << 16) |	// [31:16] IRQ block.
-								(0x3 << 8) |	// [15: 8] chan_mem_mask. Each bit indicates which channels exist in memory
-								(0x3 << 0));	// [ 7: 0] chan_rd_mask.  Each bit indicates which channels are READ from memory
+    else {
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+       WRITE_MPEG_REG(AIU_MEM_I2S_MASKS,       (24 << 16) |    // [31:16] IRQ block.
+                                (0xff << 8) |    // [15: 8] chan_mem_mask. Each bit indicates which channels exist in memory
+                                (0xff << 0));    // [ 7: 0] chan_rd_mask.  Each bit indicates which channels are READ from memory
+#else
+       WRITE_MPEG_REG(AIU_MEM_I2S_MASKS,       (24 << 16) |    // [31:16] IRQ block.
+                                 (0x3 << 8) |    // [15: 8] chan_mem_mask. Each bit indicates which channels exist in memory
+                                 (0x3 << 0));    // [ 7: 0] chan_rd_mask.  Each bit indicates which channels are READ from memory
+#endif
 
+    }
     // 16 bit PCM mode
     //  WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 1, 6, 1);
 	// Set init high then low to initilize the I2S memory logic
@@ -254,11 +277,23 @@ void audio_set_958outbuf(u32 addr, u32 size,int flag)
 		else
         WRITE_MPEG_REG(AIU_MEM_IEC958_RD_PTR, addr & 0xffffffc0);
         if(flag == 0){
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+            WRITE_MPEG_REG(AIU_MEM_IEC958_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 8);    // this is for 16bit 2 channel
+#else
           WRITE_MPEG_REG(AIU_MEM_IEC958_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 64);    // this is for 16bit 2 channel
+#endif
         }else{
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+            WRITE_MPEG_REG(AIU_MEM_IEC958_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 8);    // this is for RAW mode
+#else
           WRITE_MPEG_REG(AIU_MEM_IEC958_END_PTR, (addr & 0xffffffc0) + (size & 0xffffffc0) - 1);    // this is for RAW mode
+#endif
         }
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+        WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_MASKS, 0xffff, 0, 16);
+#else
         WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_MASKS, 0x303, 0, 16);
+#endif
 
         WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 1, 0, 1);
         WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 0, 1);
@@ -270,14 +305,24 @@ void audio_set_958outbuf(u32 addr, u32 size,int flag)
 /*
 i2s mode 0: master 1: slave
 */
-static void i2sin_fifo0_set_buf(u32 addr, u32 size,u32 i2s_mode,u32 i2s_sync)
+static void i2sin_fifo0_set_buf(u32 addr, u32 size,u32 i2s_mode,
+		u32 i2s_sync, int ch, snd_pcm_format_t format)
 {
 	unsigned char  mode = 0;
     unsigned int sync_mode = 0;
+	unsigned int fifo_bytes = 0;
+	unsigned int i2s_size = 0;
     if(i2s_sync)
         sync_mode = i2s_sync;
 	if(i2s_mode &I2SIN_SLAVE_MODE)
 		mode = 1;
+	if (SNDRV_PCM_FORMAT_S16_LE == format) {
+		fifo_bytes = 1;
+		i2s_size = 0;
+	} else {
+		fifo_bytes = 2;
+		i2s_size = 3;
+	}
 	WRITE_MPEG_REG(AUDIN_FIFO0_START, addr & 0xffffffc0);
 	WRITE_MPEG_REG(AUDIN_FIFO0_PTR, (addr&0xffffffc0));
 	WRITE_MPEG_REG(AUDIN_FIFO0_END, (addr&0xffffffc0) + (size&0xffffffc0)-8);
@@ -288,7 +333,11 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size,u32 i2s_mode,u32 i2s_sync)
 	    							//|(1<<6)	// 32 bits data in./*AUDIN_FIFO0_D32b */
 									//|(0<<7)	// put the 24bits data to  low 24 bits./* AUDIN_FIFO0_h24b */16bit
 								|(4<<AUDIN_FIFO0_ENDIAN)	// /*AUDIN_FIFO0_ENDIAN */
-								|(2<<AUDIN_FIFO0_CHAN)//2 channel./* AUDIN_FIFO0_CHAN*/
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+									|(1 << AUDIN_FIFO0_CHAN) /* ch mode ctl */
+#else
+								   |((ch == 2?2:1) << AUDIN_FIFO0_CHAN) /* ch mode ctl */
+#endif
 		    						|(0<<16)	//to DDR
                                                        |(1<<AUDIN_FIFO0_UG)    // Urgent request.  DDR SDRAM urgent request enable.
                                                        |(0<<17)    // Overflow Interrupt mask
@@ -296,26 +345,37 @@ static void i2sin_fifo0_set_buf(u32 addr, u32 size,u32 i2s_mode,u32 i2s_sync)
 			                                	//|(1<<19)	//hold 0 enable
 								|(0<<AUDIN_FIFO0_UG)	// hold0 to aififo
 				  );
-
+#ifdef CONFIG_SND_AML_SPLIT_MODE_MMAP
     WRITE_MPEG_REG(AUDIN_FIFO0_CTRL1,    0 << 4                       // fifo0_dest_sel
+					| fifo_bytes << 2 /* fifo0_din_byte_num */
+					| 1 << 0);	/* fifo0_din_pos */
+#else
+    WRITE_MPEG_REG(AUDIN_FIFO0_CTRL1,    0 << 4               // fifo0_dest_sel
                                        | 2 << 2                       // fifo0_din_byte_num
                                        | 0 << 0);                      // fifo0_din_pos
-
-
-	WRITE_MPEG_REG(AUDIN_I2SIN_CTRL, //(0<<I2SIN_SIZE)			///*bit8*/  16bit
-									 (3<<I2SIN_SIZE)
-									|(1<<I2SIN_CHAN_EN)		/*bit10~13*/ //2 channel
-#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6TV
-									|(sync_mode<<I2SIN_POS_SYNC)
-#else
-									|(1<<I2SIN_POS_SYNC)
 #endif
-									|(1<<I2SIN_LRCLK_SKEW)
-                                    				|(1<<I2SIN_LRCLK_INVT)
-									|(!mode<<I2SIN_CLK_SEL)
-									|(!mode<<I2SIN_LRCLK_SEL)
-				    				|(!mode<<I2SIN_DIR)
-				  );
+
+	#ifdef CONFIG_SND_AML_SPLIT_MODE_MMAP
+			WRITE_MPEG_REG(AUDIN_I2SIN_CTRL,
+					((0xf>>(4 - ch/2)) << I2SIN_CHAN_EN)
+					| (i2s_size << I2SIN_SIZE)
+					| (1 << I2SIN_LRCLK_INVT)
+					| (1 << I2SIN_LRCLK_SKEW)
+					| (1 << I2SIN_POS_SYNC)
+					| (!mode << I2SIN_LRCLK_SEL)
+					| (!mode << I2SIN_CLK_SEL)
+					| (!mode << I2SIN_DIR));
+#else
+        WRITE_MPEG_REG(AUDIN_I2SIN_CTRL,
+                                    (1<<I2SIN_CHAN_EN)        //  2 channel
+                                    |(3<<I2SIN_SIZE)
+                                    |(1<<I2SIN_LRCLK_INVT)
+                                    |(1<<I2SIN_LRCLK_SKEW)
+                                    |(sync_mode<<I2SIN_POS_SYNC)
+                                    |(!mode<<I2SIN_LRCLK_SEL)
+                                    |(!mode<<I2SIN_CLK_SEL)
+                                    |(!mode<<I2SIN_DIR));
+#endif
 
 }
 
@@ -366,10 +426,11 @@ static void spdifin_fifo1_set_buf(u32 addr, u32 size)
 
 	WRITE_MPEG_REG(AUDIN_FIFO1_CTRL1,0xc);
 }
-void audio_in_i2s_set_buf(u32 addr, u32 size,u32 i2s_mode, u32 i2s_sync)
+void audio_in_i2s_set_buf(u32 addr, u32 size,u32 i2s_mode, 
+		u32 i2s_sync, int ch, snd_pcm_format_t format)
 {
 	printk("i2sin_fifo0_set_buf \n");		
-	i2sin_fifo0_set_buf(addr,size,i2s_mode,i2s_sync);
+    i2sin_fifo0_set_buf(addr, size, i2s_mode, i2s_sync, ch, format);
 	audio_in_buf_ready = 1;
 }
 void audio_in_spdif_set_buf(u32 addr, u32 size)
@@ -471,6 +532,51 @@ void audio_in_spdif_set_wrptr(unsigned int val)
 {
 	WRITE_MPEG_REG(AUDIN_FIFO1_RDPTR, val);
 }
+
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+void audio_set_i2s_mode(u32 mode, unsigned int channel)
+{
+	WRITE_MPEG_REG(AIU_I2S_SOURCE_DESC, 0x800);
+	WRITE_MPEG_REG_BITS(AIU_CLK_CTRL_MORE, 0, 0, 0x1f);
+
+	if (8 == channel) {
+       /* for two channels stream */
+        WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 0, 1);
+
+        if (mode == AIU_I2S_MODE_PCM16) {
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 9, 1);
+			WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 7, 1);
+        } else if(mode == AIU_I2S_MODE_PCM24){
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 9, 1);
+			WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 7, 6, 3);
+			WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 5, 1);
+        }else if(mode == AIU_I2S_MODE_PCM32){
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 1, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 2, 3, 2);
+			WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 5, 0, 5);
+        }
+
+     } else if (2 == channel) {
+       /* for two channels stream */
+        WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 0, 0, 1);
+
+        if (mode == AIU_I2S_MODE_PCM16) {
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 1, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 2, 3, 2);
+        } else if(mode == AIU_I2S_MODE_PCM24){
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 9, 1);
+        }else if(mode == AIU_I2S_MODE_PCM32){
+            WRITE_MPEG_REG_BITS(AIU_MEM_I2S_CONTROL, 0, 6, 1);
+            WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 1, 9, 1);
+			WRITE_MPEG_REG_BITS(AIU_I2S_SOURCE_DESC, 7, 6, 3);
+        }
+
+    }
+}
+#else
 void audio_set_i2s_mode(u32 mode)
 {
     const unsigned short mask[4] = {
@@ -508,6 +614,7 @@ void audio_set_i2s_mode(u32 mode)
         }
     }
 }
+#endif
 
 /**
  *  if normal clock, i2s clock is twice of 958 clock, so the divisor for i2s is 8, but 4 for 958
@@ -575,7 +682,11 @@ void audio_util_set_dac_i2s_format(unsigned format)
     	WRITE_MPEG_REG(AIU_I2S_DAC_CFG, 	0x000f);	// Payload 24-bit, Msb first, alrclk = aoclk/64.mute const 0x800000
     else
     	WRITE_MPEG_REG(AIU_I2S_DAC_CFG, 	0x0007);	// Payload 24-bit, Msb first, alrclk = aoclk/64
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+	WRITE_MPEG_REG(AIU_I2S_SOURCE_DESC, (1<<11));    // four 2-channel   
+#else
 	WRITE_MPEG_REG(AIU_I2S_SOURCE_DESC, 0x0001);	// four 2-channel	
+#endif
 }
 
 enum clk_enum
@@ -1124,8 +1235,13 @@ void audio_set_958_mode(unsigned mode, _aiu_958_raw_setting_t * set)
     }else if(mode == AIU_958_MODE_PCM32){
         audio_hw_set_958_pcm24(set);
         if(ENABLE_IEC958){
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+            WRITE_MPEG_REG(AIU_958_MISC, 0x3480);
+            WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 1, 8, 1);  // pcm
+#else
             WRITE_MPEG_REG(AIU_958_MISC, 0x2020 | (1 << 7));
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 8, 1);  // pcm
+#endif
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 7, 1);  // 16bit
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 3, 3); // endian
         }
@@ -1133,8 +1249,13 @@ void audio_set_958_mode(unsigned mode, _aiu_958_raw_setting_t * set)
     }else if (mode == AIU_958_MODE_PCM24) {
         audio_hw_set_958_pcm24(set);
         if (ENABLE_IEC958) {
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+            WRITE_MPEG_REG(AIU_958_MISC, 0x3480);
+            WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 1, 8, 1);  // pcm
+#else
             WRITE_MPEG_REG(AIU_958_MISC, 0x2020 | (1 << 7));
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 8, 1);  // pcm
+#endif
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 7, 1);  // 16bit
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 3, 3); // endian
 
@@ -1144,7 +1265,11 @@ void audio_set_958_mode(unsigned mode, _aiu_958_raw_setting_t * set)
         audio_hw_set_958_pcm24(set);
         if (ENABLE_IEC958) {
             WRITE_MPEG_REG(AIU_958_MISC, 0x2042);
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+            WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 1, 8, 1);  // pcm
+#else
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 8, 1);  // pcm
+#endif
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 1, 7, 1);  // 16bit
             WRITE_MPEG_REG_BITS(AIU_MEM_IEC958_CONTROL, 0, 3, 3); // endian
 
@@ -1153,6 +1278,11 @@ void audio_set_958_mode(unsigned mode, _aiu_958_raw_setting_t * set)
     }
 
     audio_hw_958_reset(0, 1);
+
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+	if (mode == AIU_958_MODE_PCM32)
+		WRITE_MPEG_REG_BITS(AIU_958_DCU_FF_CTRL, 1, 8, 1);
+#endif
 
     WRITE_MPEG_REG(AIU_958_FORCE_LEFT, 1);
 }
