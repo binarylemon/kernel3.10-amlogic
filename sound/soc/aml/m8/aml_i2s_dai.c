@@ -56,9 +56,19 @@ static void  aml_hw_i2s_init(struct snd_pcm_runtime *runtime)
 		i2s_mode = AIU_I2S_MODE_PCM16;
 		break;
 	}
+#ifdef CONFIG_SND_AML_SPLIT_MODE
+	audio_set_i2s_mode(i2s_mode, runtime->channels);
+#else
 	audio_set_i2s_mode(i2s_mode);
-	audio_set_aiubuf(runtime->dma_addr, runtime->dma_bytes,runtime->channels);
-	ALSA_PRINT("i2s dma %x,phy addr %x,mode %d,ch %d \n",(unsigned)runtime->dma_area,(unsigned)runtime->dma_addr,i2s_mode,runtime->channels);
+#endif
+	audio_set_aiubuf(runtime->dma_addr, runtime->dma_bytes,
+			 runtime->channels,
+			 runtime->format);
+	
+ALSA_PRINT("i2s dma %x,phy addr %x,mode %d,ch %d \n",
+		    (unsigned)runtime->dma_area, (unsigned)runtime->dma_addr,
+		    i2s_mode, runtime->channels);
+
 }
 static int aml_dai_i2s_startup(struct snd_pcm_substream *substream,
 					struct snd_soc_dai *dai)
@@ -154,19 +164,46 @@ static int aml_dai_i2s_prepare(struct snd_pcm_substream *substream,
 			audio_clk_config	=	AUDIO_CLK_FREQ_441;
 			break;
 	};
-
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		audio_out_i2s_enable(0);
+	}
     if( i2s->old_samplerate != runtime->rate ){
 		ALSA_PRINT("enterd %s,old_samplerate:%d,sample_rate=%d\n",__func__,i2s->old_samplerate,runtime->rate);
         i2s->old_samplerate = runtime->rate;
         audio_set_i2s_clk(audio_clk_config, AUDIO_CLK_256FS, i2s->mpll);
     }
-    audio_util_set_dac_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP); 
+	audio_util_set_dac_i2s_format(AUDIO_ALGOUT_DAC_FORMAT_DSP);
+
     
     if(substream->stream == SNDRV_PCM_STREAM_CAPTURE)
     {
         s->i2s_mode = dai_info[dai->id].i2s_mode;
-        audio_in_i2s_set_buf(runtime->dma_addr, runtime->dma_bytes*2,0,i2s_pos_sync);
+		if (runtime->format == SNDRV_PCM_FORMAT_S16_LE) {
+#ifdef CONFIG_SND_AML_SPLIT_MODE_MMAP
+			audio_in_i2s_set_buf(runtime->dma_addr,
+					runtime->dma_bytes,
+					0, i2s_pos_sync,
+					runtime->channels,
+					runtime->format);
+			memset((void *)runtime->dma_area, 0,
+					runtime->dma_bytes);
+#else
+ 			audio_in_i2s_set_buf(runtime->dma_addr,
+ 					runtime->dma_bytes * 2,
+					0, i2s_pos_sync,
+					runtime->channels,
+					runtime->format);
         memset((void*)runtime->dma_area,0,runtime->dma_bytes*2);
+#endif
+		} else {
+	 			audio_in_i2s_set_buf(runtime->dma_addr,
+ 					runtime->dma_bytes,
+					0, i2s_pos_sync,
+					runtime->channels,
+					runtime->format);
+				memset((void *)runtime->dma_area, 0,
+ 					runtime->dma_bytes);
+	}
         {
             int * ppp = (int*)(runtime->dma_area+runtime->dma_bytes*2-8);
             ppp[0] = 0x78787878;
