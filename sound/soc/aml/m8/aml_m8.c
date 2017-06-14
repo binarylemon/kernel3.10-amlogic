@@ -271,6 +271,7 @@ static int aml_asoc_hw_params(struct snd_pcm_substream *substream,
 
     /* set cpu DAI configuration */
     if((!strncmp(codec_info.name_bus,"rt5616",strlen("rt5616"))) || 
+       (!strncmp(codec_info.name_bus,"tlv320aic3x",strlen("tlv320aic3x"))) ||
         !(strncmp(codec_info.name_bus,"aml_pmu3_codec",strlen("aml_pmu3_codec")))
 		){
         pr_info("set cpu_dai SND_SOC_DAIFMT_IB_NF | SND_SOC_DAIFMT_CBM_CFM\n");
