@@ -476,6 +476,14 @@ typedef	struct environment_s {
 	unsigned char	data[ENV_SIZE]; /* Environment data		*/
 } env_t;
 #ifdef CONFIG_SECURE_NAND
+/* magic should be same with amlnf for same spl
+ *	move from uboot next-dev
+ */
+#define CONFIG_SECURE_SIZE			(0x10000*2) /* 128k */
+#define SECURE_SIZE (CONFIG_SECURE_SIZE - (sizeof(uint32_t)))
+#define SECURE_STORE_MAGIC         (0x6365736e)
+#define REMAIN_BLOCK_NUM			4
+#define NAND_SECURE_BLK				2
 typedef	struct {
 	uint32_t	crc;		/* CRC32 over data bytes	*/
 	unsigned char	data[SECURE_SIZE]; /* Environment data		*/

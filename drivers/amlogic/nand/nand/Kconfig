@@ -39,6 +39,14 @@ config AML_NAND_KEY
 	help
 	  Support   key variable store in NAND device
 	  
+config SECURE_NAND
+	bool "Meson secure store in mtd nand support"
+	depends on AM_NAND
+	depends on ARCH_MESON3 || ARCH_MESON6 || ARCH_MESON8B
+	default n
+	help
+	  Support   secure storage store in NAND device
+	  
 config NAND_KEY_BLOCK_NUM
 	int "config nand key area block number"
 	depends on AML_NAND_KEY

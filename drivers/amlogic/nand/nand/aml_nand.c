@@ -43,7 +43,8 @@ extern  int m3_nand_boot_read_page_hwecc(struct mtd_info *mtd, struct nand_chip 
 extern  void m3_nand_boot_erase_cmd(struct mtd_info *mtd, int page);
 
 #ifdef CONFIG_AML_NAND_KEY
-extern	int aml_key_init(struct aml_nand_chip *aml_chip);
+extern int aml_key_init(struct aml_nand_chip *aml_chip);
+extern int secure_device_init(struct mtd_info *mtd);
 #endif
 
 
@@ -1748,6 +1749,7 @@ static int aml_repair_bbt(struct aml_nand_chip *aml_chip,unsigned int *bad_blk_a
 	printk("###bbt write into nand flash\n");
 	return aml_nand_update_env(mtd);
 }
+
 static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 {
 	uint64_t adjust_offset = 0, mini_part_blk_num, start_blk = 0,key_block =0;
@@ -1815,7 +1817,7 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 			start_blk++;
 		} while (start_blk < mini_part_blk_num);
 		adjust_offset += mini_part_blk_num * mtd->erasesize;
-
+		pr_info("%s() %d: nr=%d\n", __func__, __LINE__, nr);
 		if (nr == 0) {
 			part_save_in_env = 0;
 			if (nand_boot_flag)
@@ -1836,6 +1838,7 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 			if ((temp_parts->size >= mtd->erasesize) || (i == (nr - 1)))
 				mini_part_size = temp_parts->size;
 			temp_parts->offset = adjust_offset;
+			/* fixme, why here??? */
 			if((aml_chip->update_env_flag)&&((mini_part_size > NAND_SYS_PART_SIZE))&&(file_system_part == 0)){
 
 				memset(&aml_env_erase_info, 0, sizeof(struct erase_info));
@@ -1909,6 +1912,7 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 						bad_blk_addr,bad_block_cnt);
 				}
 			}
+			
 			if ((i == (nr - 1)) && (part_save_in_env == 0))
 				temp_parts->size = NAND_SYS_PART_SIZE;
 			else if (mini_part_size != MTDPART_SIZ_FULL)
@@ -1931,6 +1935,13 @@ static int aml_nand_add_partition(struct aml_nand_chip *aml_chip)
 		} else {
 			temp_parts->size -= key_block*mtd->erasesize;
 		}
+		
+#endif
+#ifdef CONFIG_SECURE_NAND
+		temp_parts = parts + (nr-1);
+		loff_t secure_block;
+		secure_block = aml_chip->aml_nandsecure_info->end_block - aml_chip->aml_nandsecure_info->start_block + 1;
+		temp_parts->size -= secure_block * mtd->erasesize;
 #endif
 	}
 
@@ -7180,6 +7191,10 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 
 #ifdef CONFIG_AML_NAND_KEY
         aml_key_init(aml_chip);
+#endif
+#ifdef CONFIG_SECURE_NAND
+		pr_info("%s() %d\n", __func__, __LINE__);
+		secure_device_init(mtd);
 #endif
           /*setup class*/
     	aml_chip->cls.name = kzalloc(strlen((const char*)NAND_MULTI_NAME)+1, GFP_KERNEL);

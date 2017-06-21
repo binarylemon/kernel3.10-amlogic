@@ -17,4 +17,5 @@ obj-$(CONFIG_ARCH_MESON8B)	+= m3_nand.o
 #else                                           
 #	obj-$(CONFIG_AML_NFTL)		+= aml_nftl/      
 #endif
-obj-$(CONFIG_AML_NAND_KEY)	+=nand_key.o  
+obj-$(CONFIG_AML_NAND_KEY)	+=nand_key.o
+obj-$(CONFIG_SECURE_NAND)	+=secure_storage.o
