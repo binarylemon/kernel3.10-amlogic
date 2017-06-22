@@ -266,19 +266,15 @@ int run_arc_program(void)
 	
 	if(cec_config & 0x1)// 4 bytes: use to control cec switch on/off,distinguish between Mbox and Tablet. bit[0]:1:Mbox; 0:Tablet
     {
-	printk("%s:%d\n", __func__, __LINE__);
     	aml_write_reg32(P_AO_REMAP_REG0,0);
     	udelay(10);
     	pbuffer = (unsigned*)vaddr2;
     
-	printk("%s:%d\n", __func__, __LINE__);
     	memcpy(pbuffer,arc_code,sizeof(arc_code));//need not flush cache for sram. Sram locates at io mapping.
     
 //    	for(i = 0; i<sizeof(arc_code)/4; i+=4,pbuffer+=4)
 //    		printk(" 0x%x	0x%x	0x%x	0x%x \n",*(pbuffer),*(pbuffer+1),*(pbuffer+2),*(pbuffer+3));
-	printk("%s:%d\n", __func__, __LINE__);
         v = ((IO_SRAM_PHY_BASE & 0xFFFFF)>>12);
-	printk("%s:%d\n", __func__, __LINE__);
 
 	//TEST_N : 1->output mode; 0->input mode
 #ifndef CONFIG_MESON_TRUSTZONE
@@ -286,21 +282,17 @@ int run_arc_program(void)
 #else
 	meson_secure_reg_write(P_AO_SECURE_REG0, v << 8 | meson_secure_reg_read(P_AO_SECURE_REG0));
 #endif
-	printk("%s:%d\n", __func__, __LINE__);
     
         aml_write_reg32(P_AO_RTI_STATUS_REG1, 0);//clean status
     
-	printk("%s:%d\n", __func__, __LINE__);
 //    	writel(0x200,P_AO_CPU_CNTL);//halt first
     	aml_write_reg32(P_RESET2_REGISTER, aml_read_reg32(P_RESET2_REGISTER)|(1<<13));//reset AO_CPU
     
     	udelay(10);
     
-	printk("%s:%d\n", __func__, __LINE__);
 //      enable arc
         aml_write_reg32(P_AO_CPU_CNTL, 0x0c900101);//remap is right?
     
-	printk("%s:%d\n", __func__, __LINE__);
     	udelay(20);
     	if(aml_read_reg32(P_AO_RTI_STATUS_REG1) == 0xeeeeaaaa){
     		printk("AO cpu runs ok.\n");
