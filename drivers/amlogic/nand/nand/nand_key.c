@@ -532,40 +532,14 @@ static int aml_nand_key_init(struct mtd_info *mtd)
 	max_key_blk = (NAND_MINIKEY_PART_SIZE >> phys_erase_shift);
 	if (max_key_blk < NAND_MINIKEY_PART_BLOCKNUM)
 		max_key_blk = NAND_MINIKEY_PART_BLOCKNUM;
-//	if (nand_boot_flag)
-//		offset = (NAND_MINI_PART_SIZE + 1024 * mtd->writesize) / aml_chip->plane_num;
-#if 0
-	offset = (1024 * mtd->writesize) / aml_chip->plane_num;
-	//env size
-	max_env_blk = (NAND_MINI_PART_SIZE >> phys_erase_shift);
-	if(max_env_blk < NAND_MINI_PART_BLOCKNUM)
-		max_env_blk = NAND_MINI_PART_BLOCKNUM;
-	start_blk = 0;
-	do{
-		env_offset = offset + start_blk * mtd->erasesize;
-		error = mtd->_block_isbad(mtd, env_offset);
-		if (error) {
-			offset += mtd->erasesize;
-			continue;
-		}
-		start_blk++;
-	}while(start_blk < max_env_blk);
-	offset += max_env_blk * mtd->erasesize;
-#endif
+
 #ifdef NEW_NAND_SUPPORT
 	if((aml_chip->new_nand_info.type) && (aml_chip->new_nand_info.type < 10))
 		offset += RETRY_NAND_BLK_NUM* mtd->erasesize;
 #endif
 
-	//start_blk = (int)(offset >> phys_erase_shift);
-	//total_blk = (int)(mtd->size >> phys_erase_shift);
-	//aml_chip->aml_nandkey_info->start_block=start_blk;
-	//printk("start_blk=%d\n",aml_chip->aml_nandkey_info->start_block);
-	//aml_chip->aml_nandkey_info->end_block=start_blk;
 	pages_per_blk = (1 << (chip->phys_erase_shift - chip->page_shift));
 	key_oobinfo = (struct env_oobinfo_t *)key_oob_buf;
-	//if ((default_keyironment_size + sizeof(struct aml_nand_bbt_info)) > KEYSIZE)
-	//	total_blk = start_blk + max_key_blk;
 
 #define REMAIN_TAIL_BLOCK_NUM		8
 	offset = mtd->size - mtd->erasesize;
@@ -602,12 +576,6 @@ static int aml_nand_key_init(struct mtd_info *mtd)
 		offset *= start_blk;
 		error = mtd->_block_isbad(mtd, offset);
 		if (error) {
-			//aml_chip->aml_nandkey_info->nand_bbt_info.nand_bbt[bad_blk_cnt++] = start_blk;
-			//if(bad_blk_cnt >= MAX_BAD_BLK_NUM)
-			//{
-			//	printk("bad block too much,%s\n",__func__);
-			//	return -ENOMEM;
-			//}
 			start_blk++;
 			continue;
 		}
@@ -737,8 +705,7 @@ static int aml_nand_key_init(struct mtd_info *mtd)
 				aml_chip->aml_nandkey_info->env_valid_node->ec = key_oobinfo->ec;
 				aml_chip->aml_nandkey_info->env_valid_node->timestamp = key_oobinfo->timestamp;	
 			}
-		}
-		else if (key_blk < max_key_blk) {
+		} else if (key_blk < max_key_blk) {
 			env_free_node = kzalloc(sizeof(struct env_free_node_t), GFP_KERNEL);
 			if (env_free_node == NULL)
 				return -ENOMEM;

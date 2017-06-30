@@ -199,6 +199,16 @@
 #define NAND_ECC_BCH12            (0x6<<14)
 #define NAND_ECC_BCH16            (0x7<<14)
 
+#if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON3
+#define NAND_ECC_BCH8             (0x1)
+#define NAND_ECC_BCH8_1K          (0x2)
+#define NAND_ECC_BCH24_1K         (0x3)
+#define NAND_ECC_BCH30_1K 		  (0x4)
+#define NAND_ECC_BCH40_1K 		  (0x5)
+#define NAND_ECC_BCH50_1K 		  (0x6)
+#define NAND_ECC_BCH60_1K 		  (0x7)
+#define NAND_ECC_BCH_SHORT		  (0x8)
+#else
 #define NAND_ECC_BCH8             (0x1)
 #define NAND_ECC_BCH8_1K          (0x2)
 #define NAND_ECC_BCH16_1K         (0x3)
@@ -207,6 +217,7 @@
 #define NAND_ECC_BCH40_1K 		  (0x6)
 #define NAND_ECC_BCH60_1K 		  (0x7)
 #define NAND_ECC_BCH_SHORT		  (0x8)
+#endif
 /**
     Cmd FIFO control
 */

@@ -94,6 +94,108 @@ unsigned char pagelist_1ynm_hynix256[128] = {
 };
 #endif
 
+#ifdef CONFIG_OF
+static struct mtd_partition normal_partition_info[] = {
+    {
+        .name = "logo",
+        .offset = 16*SZ_1M,
+        .size = 8*SZ_1M,
+    },
+//    {
+//        .name = "aml_logo",
+//        .offset = 32*SZ_1M,
+//        .size = 8*SZ_1M,
+//    },
+    {
+        .name = "recovery",
+        .offset = 32*SZ_1M,
+        .size = 8*SZ_1M,
+    },
+    {
+        .name = "boot",
+        .offset = 48*SZ_1M,
+        .size = 8*SZ_1M,
+    },
+    {
+        .name = "system",
+        .offset = 64*SZ_1M,
+        .size = 16*SZ_1M,
+    },
+    {
+        .name = "cache",
+        .offset = 88*SZ_1M,
+        .size = 8*SZ_1M,
+    },
+//    {
+//        .name = "backup",
+//        .offset = 104*SZ_1M,
+//        .size = 8*SZ_1M,
+//    },
+#if 1
+   {
+        .name = "userdata",
+        .offset = MTDPART_OFS_APPEND,
+        .size = MTDPART_SIZ_FULL,
+    },
+#else
+    {
+        .name = "userdata",
+        .offset = 1408*SZ_1M+40*SZ_1M,
+        .size = 1024*SZ_1M,
+    },
+    {
+        .name = "NFTL_Part",
+        .offset = MTDPART_OFS_APPEND,
+        .size = MTDPART_SIZ_FULL,
+    },
+#endif
+
+};
+static struct aml_nand_platform aml_nand_mid_platform[] = {
+#ifndef CONFIG_AMLOGIC_SPI_NOR
+    {
+	#if 1
+        .name = NAND_BOOT_NAME,
+        .chip_enable_pad = AML_NAND_CE0,
+        .ready_busy_pad = AML_NAND_CE0,
+        .platform_nand_data = {
+            .chip =  {
+                .nr_chips = 1,
+                .options = (NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE),
+            },
+        },
+        .rbpin_detect=1,        
+        .T_REA = 20,
+        .T_RHOH = 15,
+        #endif
+    },
+#endif
+    {
+	#if 0
+        .name = NAND_NORMAL_NAME,
+        .chip_enable_pad = ((AML_NAND_CE0) | (AML_NAND_CE1 << 4)  | (AML_NAND_CE2 << 8) | (AML_NAND_CE3 << 12)),
+        .ready_busy_pad = (AML_NAND_CE0) | (AML_NAND_CE1 << 4),// | (AML_NAND_CE1 << 8) | (AML_NAND_CE1 << 12)*/),
+        .platform_nand_data = {
+            .chip =  {
+                .nr_chips = 1,
+                .nr_partitions = ARRAY_SIZE(normal_partition_info),
+                .partitions = normal_partition_info,
+                .options = (NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE),
+            },
+        },
+        .rbpin_detect=1,        
+        .T_REA = 20,
+        .T_RHOH = 15,
+	#endif
+    }
+};
+static struct aml_nand_device aml_nand_mid_device = {
+    .aml_nand_platform = aml_nand_mid_platform,
+    .dev_num = ARRAY_SIZE(aml_nand_mid_platform),
+};
+#define AMLOGIC_NAND_DRV_DATA ((kernel_ulong_t)&aml_nand_mid_device)
+#endif	//CONFIG_OF
+
 static unsigned char mx_revd_flag = 0;
 static unsigned mx_nand_check_chiprevd(void)
 {
@@ -115,83 +217,6 @@ static struct aml_nand_device *to_nand_dev(struct platform_device *pdev)
 {
 	return pdev->dev.platform_data;
 }
-#if 0
-static pinmux_item_t nand_ce0_pins[] = {
-    {
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<25,
-    },
-    PINMUX_END_ITEM
-};
-
-static pinmux_item_t nand_ce1_pins[] = {
-	{
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<24,
-    },
-    PINMUX_END_ITEM
-};
-
- static pinmux_item_t nand_ce2_pins[] = {
- 	{
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<23,
-    },
-    PINMUX_END_ITEM
-};
-
- static pinmux_item_t nand_ce3_pins[] = {
- 	{
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<22,
-    },
-    PINMUX_END_ITEM
-};
-
-static pinmux_set_t nand_ce0 = {
-    .chip_select = NULL,
-    .pinmux = &nand_ce0_pins[0]
-};
-static pinmux_set_t nand_ce1 = {
-    .chip_select = NULL,
-    .pinmux = &nand_ce1_pins[0]
-};
-static pinmux_set_t nand_ce2 = {
-    .chip_select = NULL,
-    .pinmux = &nand_ce2_pins[0]
-};
-static pinmux_set_t nand_ce3 = {
-    .chip_select = NULL,
-    .pinmux = &nand_ce3_pins[0]
-};
-#endif
-/*
-static pinmux_item_t nand_rb0_pins[] = {
-    {
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<17,
-    },
-    PINMUX_END_ITEM
-};
-
-static pinmux_item_t nand_rb1_pins[] ={
-	{
-        .reg = PINMUX_REG(2),
-        .setmask = 1<<16,
-    },
-    PINMUX_END_ITEM
-};
-
-static pinmux_set_t nand_rb0 = {
-    .chip_select = NULL,
-    .pinmux = &nand_rb0_pins[0]
-};
-
-static pinmux_set_t nand_rb1 = {
-    .chip_select = NULL,
-    .pinmux = &nand_rb1_pins[0]
-};
-*/
 
 static struct pinctrl *p_pictl=NULL;
 struct device *nand_dev;
@@ -220,49 +245,15 @@ void aml_pinmux_set(const char *name)
 
 static void m3_nand_select_chip(struct aml_nand_chip *aml_chip, int chipnr)
 {
-//	int i;
-	//struct device *nand_dev = aml_chip->device ;
 	switch (chipnr) {
 		case 0:
 		case 1:
 		case 2:
-		case 3:
-		   
+		case 3:   
 			aml_chip->chip_selected = aml_chip->chip_enable[chipnr];
 			aml_chip->rb_received = aml_chip->rb_enable[chipnr];
-#if 0
-			for (i=0; i<aml_chip->chip_num; i++) {
-
-				if (aml_chip->valid_chip[i]) {
-					if (!((aml_chip->chip_enable[i] >> 10) & 1))
-						aml_pinmux_set(nand_dev,&nand_ce0);
-						
-						
-					if (!((aml_chip->chip_enable[i] >> 10) & 2))
-						aml_pinmux_set(nand_dev,&nand_ce1);
-						#if 0
-					if (!((aml_chip->chip_enable[i] >> 10) & 4))
-						//pinmux_set(&nand_ce2);
-						;
-					if (!((aml_chip->chip_enable[i] >> 10) & 8))
-						//pinmux_set(&nand_ce3);
-						;
-					#endif
-					if (((aml_chip->ops_mode & AML_CHIP_NONE_RB) == 0) && (aml_chip->rb_enable[i])){
-						if (!((aml_chip->rb_enable[i] >> 10) & 1))
-							aml_pinmux_set(nand_dev,&nand_rb0);
-							
-						if (!((aml_chip->rb_enable[i] >> 10) & 2))
-							aml_pinmux_set(nand_dev,&nand_rb1);
-							
-					}
-				}
-			}
-#endif
 			NFC_SEND_CMD_IDLE(aml_chip->chip_selected, 0);
-
 			break;
-
 		default:
 			BUG();
 			aml_chip->chip_selected = CE_NOT_SEL;
@@ -458,33 +449,35 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 	options_define = (aml_chip->options & NAND_ECC_OPTIONS_MASK);
 
 	for (i=0; i<max_bch_mode; i++) {
-		if (ecc_supports[i].bch_mode == options_selected) {
+		if (ecc_supports[i].bch_mode == options_selected)
+			break;
+	}
+	j = i;
+	for(i=max_bch_mode-1; i>0; i--) {
+		ecc_bytes = aml_chip->oob_size / (aml_chip->page_size / ecc_supports[i].bch_unit_size);
+		if(ecc_bytes >= ecc_supports[i].bch_bytes + ecc_supports[i].user_byte_mode) {
+			options_support = ecc_supports[i].bch_mode;
+			printk("auto support bch mode: %d\n", options_support);            
 			break;
 		}
 	}
-	j = i;
-
-    for(i=max_bch_mode-1; i>0; i--)
-    {
-        ecc_bytes = aml_chip->oob_size / (aml_chip->page_size / ecc_supports[i].bch_unit_size);
-        if(ecc_bytes >= ecc_supports[i].bch_bytes + ecc_supports[i].user_byte_mode)
-        {
-            options_support = ecc_supports[i].bch_mode;
-            break;
-        }
-    }
 
 	if (options_define != options_support) {
 		options_define = options_support;
-		//printk("define oob size: %d could support bch mode: %s\n", aml_chip->oob_size, ecc_supports[options_support].name);
+		printk("define oob size: %d could support bch mode: %s\n", 
+			aml_chip->oob_size, ecc_supports[i].name);
 	}
 
 	if (options_selected > options_define) {
-		printk("oob size is not enough for selected bch mode: %s force bch to mode: %s\n", ecc_supports[j].name, ecc_supports[i].name);
+		printk("oob size is not enough for selected bch mode: %s force bch to mode: %s\n", 
+			ecc_supports[j].name, ecc_supports[i].name);
 		options_selected = options_define;
 	}
-	aml_chip->oob_fill_cnt = aml_chip->oob_size -(ecc_supports[i].bch_bytes + ecc_supports[i].user_byte_mode)*(aml_chip->page_size / ecc_supports[i].bch_unit_size);
-	printk("aml_chip->oob_fill_cnt =%d,aml_chip->oob_size =%d,bch_bytes =%d\n",aml_chip->oob_fill_cnt,aml_chip->oob_size,ecc_supports[i].bch_bytes);
+	aml_chip->oob_fill_cnt = 
+	aml_chip->oob_size -(ecc_supports[i].bch_bytes + ecc_supports[i].user_byte_mode)*(aml_chip->page_size / ecc_supports[i].bch_unit_size);
+	printk("aml_chip->oob_fill_cnt =%d,aml_chip->oob_size =%d,bch_bytes =%d\n",
+		aml_chip->oob_fill_cnt,aml_chip->oob_size,ecc_supports[i].bch_bytes);
+	//options_selected = NAND_ECC_BCH8_MODE;
 
 	switch (options_selected) {
 
@@ -495,8 +488,6 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 			aml_chip->user_byte_mode = 2;
 			chip->ecc.steps = mtd->writesize / chip->ecc.size;
 			break;
-
-
 
 		case NAND_ECC_BCH24_1K_MODE:
 			chip->ecc.size = NAND_ECC_UNIT_1KSIZE;
@@ -545,7 +536,8 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 	options_selected = (plat->platform_nand_data.chip.options & NAND_INTERLEAVING_OPTIONS_MASK);
 	options_define = (aml_chip->options & NAND_INTERLEAVING_OPTIONS_MASK);
 	if (options_selected > options_define) {
-		printk("internal mode error for selected internal mode: %s force internal mode to : %s\n", aml_nand_internal_string[options_selected >> 16], aml_nand_internal_string[options_define >> 16]);
+		printk("internal mode error for selected internal mode: %s force internal mode to : %s\n", 
+			aml_nand_internal_string[options_selected >> 16], aml_nand_internal_string[options_define >> 16]);
 		options_selected = options_define;
 	}
 
@@ -568,20 +560,20 @@ static int m3_nand_options_confirm(struct aml_nand_chip *aml_chip)
 		options_selected = options_define;
 	}
 
+	valid_chip_num = 0;
 	for (i=0; i<aml_chip->chip_num; i++) {
-		if (aml_chip->valid_chip[i]) {
+		if (aml_chip->valid_chip[i])
 		    valid_chip_num++;
-		}
     	}
 
 	if (aml_chip->ops_mode & AML_INTERLEAVING_MODE)
 		valid_chip_num *= aml_chip->internal_chipnr;
 
-	if(valid_chip_num > 2){
+	if(valid_chip_num > 2) {
 		aml_chip->plane_num = 1;
-	    	printk("detect valid_chip_num:%d over 2, and aml_chip->internal_chipnr:%d, disable NAND_TWO_PLANE_MODE here\n", valid_chip_num, aml_chip->internal_chipnr);
-	}
-	else{
+	    	printk("detect valid_chip_num:%d over 2, and aml_chip->internal_chipnr:%d, disable NAND_TWO_PLANE_MODE here\n", 
+			valid_chip_num, aml_chip->internal_chipnr);
+	} else {
 		switch (options_selected) {
 
 			case NAND_TWO_PLANE_MODE:
@@ -960,7 +952,17 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_
 	unsigned char *fill_buf =NULL;
 //#endif
 
-
+#ifdef CONFIG_SECURE_NAND
+	struct aml_nand_chip *aml_chip_device1 ; 
+	struct aml_nand_platform *plat = NULL;
+	for(i=0;i<aml_nand_mid_device.dev_num; i++){
+		plat = &aml_nand_mid_device.aml_nand_platform[i];
+		if(!strncmp((char*)plat->name, NAND_NORMAL_NAME, strlen((const char*)NAND_NORMAL_NAME))){
+			aml_chip_device1 = plat->aml_chip;
+			break;
+		}
+	}
+#endif
 
 //#ifdef MX_REVD
 	if(aml_chip->new_nand_info.type == HYNIX_1YNM_8GB) {
@@ -1060,6 +1062,11 @@ int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_
 			info->nand_read_info = nand_read_info;
 			info->pages_in_block = pages_per_blk;
 			info->new_nand_type = new_nand_type;
+			info->ce_mask = 0x01;	/*fixme! ce num is set 0x01*/
+#ifdef CONFIG_SECURE_NAND				
+			info->secure_startblock = aml_chip_device1->aml_nandsecure_info->start_block;
+			info->secure_endblock = aml_chip_device1->aml_nandsecure_info->end_block;
+#endif
 #endif //CONFIG_NAND_AML_M8
 				
 			chip->cmdfunc(mtd, NAND_CMD_SEQIN, 0x00, write_page);
@@ -1555,108 +1562,7 @@ ssize_t show_nand_version_info(struct class *class,
 
 	return 0;
 }
-
-#ifdef CONFIG_OF
-static struct mtd_partition normal_partition_info[] = {
-    {
-        .name = "logo",
-        .offset = 16*SZ_1M,
-        .size = 8*SZ_1M,
-    },
-//    {
-//        .name = "aml_logo",
-//        .offset = 32*SZ_1M,
-//        .size = 8*SZ_1M,
-//    },
-    {
-        .name = "recovery",
-        .offset = 32*SZ_1M,
-        .size = 8*SZ_1M,
-    },
-    {
-        .name = "boot",
-        .offset = 48*SZ_1M,
-        .size = 8*SZ_1M,
-    },
-    {
-        .name = "system",
-        .offset = 64*SZ_1M,
-        .size = 16*SZ_1M,
-    },
-    {
-        .name = "cache",
-        .offset = 88*SZ_1M,
-        .size = 8*SZ_1M,
-    },
-//    {
-//        .name = "backup",
-//        .offset = 104*SZ_1M,
-//        .size = 8*SZ_1M,
-//    },
-#if 1
-   {
-        .name = "userdata",
-        .offset = MTDPART_OFS_APPEND,
-        .size = MTDPART_SIZ_FULL,
-    },
-#else
-    {
-        .name = "userdata",
-        .offset = 1408*SZ_1M+40*SZ_1M,
-        .size = 1024*SZ_1M,
-    },
-    {
-        .name = "NFTL_Part",
-        .offset = MTDPART_OFS_APPEND,
-        .size = MTDPART_SIZ_FULL,
-    },
-#endif
-
-};
-static struct aml_nand_platform aml_nand_mid_platform[] = {
-#ifndef CONFIG_AMLOGIC_SPI_NOR
-    {
-		#if 1
-        .name = NAND_BOOT_NAME,
-        .chip_enable_pad = AML_NAND_CE0,
-        .ready_busy_pad = AML_NAND_CE0,
-        .platform_nand_data = {
-            .chip =  {
-                .nr_chips = 1,
-                .options = (NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE),
-            },
-        },
-        .rbpin_detect=1,        
-        .T_REA = 20,
-        .T_RHOH = 15,
-        #endif
-    },
-#endif
-    {
-	#if 0
-        .name = NAND_NORMAL_NAME,
-        .chip_enable_pad = ((AML_NAND_CE0) | (AML_NAND_CE1 << 4)  | (AML_NAND_CE2 << 8) | (AML_NAND_CE3 << 12)),
-        .ready_busy_pad = (AML_NAND_CE0) | (AML_NAND_CE1 << 4),// | (AML_NAND_CE1 << 8) | (AML_NAND_CE1 << 12)*/),
-        .platform_nand_data = {
-            .chip =  {
-                .nr_chips = 1,
-                .nr_partitions = ARRAY_SIZE(normal_partition_info),
-                .partitions = normal_partition_info,
-                .options = (NAND_TIMING_MODE5 | NAND_ECC_BCH8_MODE),
-            },
-        },
-        .rbpin_detect=1,        
-        .T_REA = 20,
-        .T_RHOH = 15,
-    #endif
-    }
-};
-static struct aml_nand_device aml_nand_mid_device = {
-    .aml_nand_platform = aml_nand_mid_platform,
-    .dev_num = ARRAY_SIZE(aml_nand_mid_platform),
-};
-#define AMLOGIC_NAND_DRV_DATA ((kernel_ulong_t)&aml_nand_mid_device)
-#endif	//CONFIG_OF
+ 
 struct nand_pad_ce{
 	char *ce_name;
 	unsigned int ce_value;

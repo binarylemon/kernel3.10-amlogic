@@ -2605,7 +2605,6 @@ static void aml_nand_erase_cmd(struct mtd_info *mtd, int page)
 
 	for (i=0; i<aml_chip->chip_num; i++) {
 		if (aml_chip->valid_chip[i]) {
-
 			aml_chip->aml_nand_select_chip(aml_chip, i);
 			page_addr = aml_chip->page_addr;
 			for (j=0; j<internal_chipnr; j++) {
@@ -6705,7 +6704,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			aml_chip->bch_mode = NAND_ECC_BCH8_1K;
 			aml_chip->user_byte_mode = 2;
 			break;
-
+		#if MESON_CPU_TYPE < MESON_CPU_TYPE_MESON3
 		case NAND_ECC_BCH16_1K_MODE:
 			chip->write_buf = aml_nand_dma_write_buf;
 			chip->read_buf = aml_nand_dma_read_buf;
@@ -6723,6 +6722,7 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			aml_chip->bch_mode = NAND_ECC_BCH16_1K;
 			aml_chip->user_byte_mode = 2;
 			break;
+		#endif
 
 		case NAND_ECC_BCH24_1K_MODE:
 			chip->write_buf = aml_nand_dma_write_buf;
@@ -6999,11 +6999,13 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			aml_chip->ecc_cnt_limit = 6;
 			aml_chip->ecc_max = 12;
 			break;
+		#if MESON_CPU_TYPE < MESON_CPU_TYPE_MESON3
 		case NAND_ECC_BCH16:
 		case NAND_ECC_BCH16_1K:
 			aml_chip->ecc_cnt_limit = 13;
 			aml_chip->ecc_max = 16;
 			break;
+		#endif
 		case NAND_ECC_BCH24_1K:
 			aml_chip->ecc_cnt_limit = 20;
 			aml_chip->ecc_max = 24;
@@ -7085,7 +7087,8 @@ int aml_nand_init(struct aml_nand_chip *aml_chip)
 			}
 			chip->ecc.layout->eccbytes *= oobmul;
 			chip->ecc.layout->oobfree[0].length *=oobmul;
-		printk(" oob layout use nand base oob layout oobsize = %d,oobmul =%d,mtd->oobsize =%d,aml_chip->oob_size =%d\n", chip->ecc.layout->oobfree[0].length,oobmul,mtd->oobsize,aml_chip->oob_size);
+			printk(" oob layout use nand base oob layout oobsize = %d,oobmul =%d,mtd->oobsize =%d,aml_chip->oob_size =%d\n", 
+				chip->ecc.layout->oobfree[0].length,oobmul,mtd->oobsize,aml_chip->oob_size);
 		}
 	}
 	/*

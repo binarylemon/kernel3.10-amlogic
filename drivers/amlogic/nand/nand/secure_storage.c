@@ -356,8 +356,10 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 	}while(++remain_block< remain_tatol_block);
 
 	aml_chip->aml_nandsecure_info->start_block = (int)(offset >> phys_erase_shift);
-	//aml_chip->aml_nandsecure_info->end_block = aml_chip->aml_nandkey_info->start_block - 1;
-	printk("%s,%d : secure start blk %d \n",__func__,__LINE__,aml_chip->aml_nandsecure_info->start_block);	
+	printk("%s,%d : secure start blk=%d end_blk=%d \n",
+		__func__,__LINE__,
+		aml_chip->aml_nandsecure_info->start_block,
+		aml_chip->aml_nandsecure_info->end_block);
 #else
 	int bad_blk_cnt = 0;
 	offset = mtd->size - mtd->erasesize;
@@ -378,9 +380,12 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 			continue;
 		}
 		remain_start_block--;
-	}while(++remain_block< remain_tatol_block);
+	} while(++remain_block< remain_tatol_block);
 	aml_chip->aml_nandsecure_info->start_block -= (remain_block-1);
-	printk("secure start_blk=%d,end_blk=%d,%s:%d\n",aml_chip->aml_nandsecure_info->start_block,aml_chip->aml_nandsecure_info->end_block,__func__,__LINE__);
+	printk("secure start_blk=%d,end_blk=%d,%s:%d\n",
+		aml_chip->aml_nandsecure_info->start_block,
+		aml_chip->aml_nandsecure_info->end_block,
+		__func__,__LINE__);
 #endif
 
 	tmp_blk = start_blk = aml_chip->aml_nandsecure_info->start_block;
@@ -390,9 +395,8 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 		offset = mtd->erasesize;
 		offset *= start_blk;
 		error = mtd->_block_isbad(mtd, offset);
-		if (error) {
+		if (error)
 			continue;
-		}
 
 		aml_oob_ops->mode = MTD_OPS_AUTO_OOB;
 		aml_oob_ops->len = mtd->writesize;
@@ -406,35 +410,32 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 
 		error = mtd->_read_oob(mtd, offset, aml_oob_ops);
 		if ((error != 0) && (error != -EUCLEAN)) {
-			printk("blk check good but read failed: %llx, %d\n", (uint64_t)offset, error);
+			printk("blk check good but read failed: %llx, %d\n", 
+				(uint64_t)offset, error);
 			continue;
 		}
 
 		aml_chip->aml_nandsecure_info->secure_init = 1;
-				    //if (secure_oobinfo->name == SECURE_STORE_MAGIC)) {
+		//if (secure_oobinfo->name == SECURE_STORE_MAGIC)) {
                 //if (!memcmp(secure_oobinfo->name, SECURE_STORE_MAGIC, 4)) {
 		if ((secure_oobinfo->name == SECURE_STORE_MAGIC)) {
 
 			aml_chip->aml_nandsecure_info->secure_valid = 1;
 			if (aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr >= 0) {
-
 				secure_free_node = kzalloc(sizeof(struct env_free_node_t), GFP_KERNEL);
-				if (secure_free_node == NULL){
+				if (secure_free_node == NULL) {
 					printk("%s %d no mem for secure_free_node\n", __func__, __LINE__);
 					err = -ENOMEM;
 					goto exit;
 				}
 				secure_free_node->dirty_flag = 1;
 				if (secure_oobinfo->timestamp > aml_chip->aml_nandsecure_info->secure_valid_node->timestamp) {
-
 					secure_free_node->phy_blk_addr = aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr;
 					aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr = start_blk;
 					aml_chip->aml_nandsecure_info->secure_valid_node->phy_page_addr = 0;
 					aml_chip->aml_nandsecure_info->secure_valid_node->timestamp = secure_oobinfo->timestamp;
-				}
-				else {
+				} else
 					secure_free_node->phy_blk_addr = start_blk;
-				}
 				if (aml_chip->aml_nandsecure_info->secure_free_node == NULL)
 					aml_chip->aml_nandsecure_info->secure_free_node = secure_free_node;
 				else {
@@ -444,14 +445,12 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 					}
 					secure_tmp_node->next = secure_free_node;
 				}
-			}
-			else {
+			} else {
 				aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr = start_blk;
 				aml_chip->aml_nandsecure_info->secure_valid_node->phy_page_addr = 0;
 				aml_chip->aml_nandsecure_info->secure_valid_node->timestamp = secure_oobinfo->timestamp;
 			}
-		}
-		else if (secure_blk < max_secure_blk) {
+		} else if (secure_blk < max_secure_blk) {
 			secure_free_node = kzalloc(sizeof(struct env_free_node_t), GFP_KERNEL);
 			if (secure_free_node == NULL){
 					printk("%s %d no mem for secure_free_node\n", __func__, __LINE__);
@@ -509,7 +508,7 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 				continue;
 			}
 
-   //if (!memcmp(secure_oobinfo->name, SECURE_STORE_MAGIC, 4))
+			//if (!memcmp(secure_oobinfo->name, SECURE_STORE_MAGIC, 4))
 			if ((secure_oobinfo->name == SECURE_STORE_MAGIC))
 				aml_chip->aml_nandsecure_info->secure_valid_node->phy_page_addr = i;
 			else
@@ -522,7 +521,9 @@ static int aml_nand_secure_init(struct mtd_info *mtd)
 	}
 
 	printk("secure_valid_node->add =%d\n",aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr);
-	printk("secure_free_node->add =%d\n",aml_chip->aml_nandsecure_info->secure_free_node->phy_blk_addr);
+	if(aml_chip->aml_nandsecure_info->secure_free_node)
+		printk("secure_free_node->add =%d\n",
+			aml_chip->aml_nandsecure_info->secure_free_node->phy_blk_addr);
 
 	offset = aml_chip->aml_nandsecure_info->secure_valid_node->phy_blk_addr;
 	offset *= mtd->erasesize;
