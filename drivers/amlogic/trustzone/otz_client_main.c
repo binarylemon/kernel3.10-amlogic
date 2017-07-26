@@ -82,7 +82,7 @@ static char *otz_svc_shrd_mem = NULL;
 
 static struct otz_smc_cdata otz_smc_cd[NR_CPUS];
 
-#define OTZ_DRIVER_INFO
+//#define OTZ_DRIVER_INFO
 #define OTZ_DRIVER_DEBUG
 #undef TZINFO
 #ifdef OTZ_DRIVER_INFO
