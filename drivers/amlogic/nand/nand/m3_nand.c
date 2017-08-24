@@ -931,7 +931,7 @@ struct nand_page0_info_t{
         //unsigned reserved[4];
     unsigned ce_mask;
 	unsigned secure_endblock;
-    unsigned reserved[2];
+    unsigned reserved;
 };
 
 int m3_nand_boot_write_page(struct mtd_info *mtd, struct nand_chip *chip,uint32_t offset, int data_len, const uint8_t *buf,int oob_required, int page, int cached, int raw)
