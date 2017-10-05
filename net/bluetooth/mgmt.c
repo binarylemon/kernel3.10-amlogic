@@ -2529,8 +2529,8 @@ static int set_local_name(struct sock *sk, struct hci_dev *hdev, void *data,
 		update_eir(&req);
 	}
 
-	if (lmp_le_capable(hdev))
-		hci_update_ad(&req);
+//	if (lmp_le_capable(hdev))
+//		hci_update_ad(&req);
 
 	err = hci_req_run(&req, set_name_complete);
 	if (err < 0)
